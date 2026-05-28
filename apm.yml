@@ -1,0 +1,7 @@
+name: agent-skills
+version: 1.0.0
+description: cffnpwr's agent skills
+author: cffnpwr
+license: MIT
+type: skill
+includes: auto
