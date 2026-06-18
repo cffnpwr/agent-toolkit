@@ -23,13 +23,22 @@ AGENTS.mdの内容をClaudeにも適用させたい場合、`CLAUDE.md` を `AGE
 
 ## 作成手順
 
-リポジトリルートで以下を実行する（`CLAUDE.md` が既に存在する場合は上書き可否をユーザーに確認する）。
+リポジトリルートで symlink を張る。`ln -s` は対象が既存だと失敗し、`ln -sf` は無確認で実体を破壊するため、既存ファイルがあれば退避してから張る。
 
 ```sh
-ln -s AGENTS.md CLAUDE.md
+if [ -L CLAUDE.md ]; then
+    ln -sfn AGENTS.md CLAUDE.md          # 既に symlink。AGENTS.md を指すよう張り替え
+elif [ -e CLAUDE.md ]; then
+    # 実体ファイルが存在。内容が AGENTS.md へ統合済みか確認 → 退避 → 張る
+    diff -u CLAUDE.md AGENTS.md || echo "unmerged differences remain; merge before continuing"
+    mv CLAUDE.md CLAUDE.md.bak
+    ln -s AGENTS.md CLAUDE.md
+else
+    ln -s AGENTS.md CLAUDE.md
+fi
 ```
 
-相対パスのsymlinkにすること（リポジトリを移動・clone してもリンクが保たれる）。
+相対パスのsymlinkにすること（リポジトリを移動・clone してもリンクが保たれる）。既存実体は退避（`.bak`）し、統合が未確認なら止めてユーザーに確認する。
 
 ## 改善ユースケースでの確認
 

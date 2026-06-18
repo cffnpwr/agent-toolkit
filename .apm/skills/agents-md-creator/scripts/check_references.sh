@@ -3,12 +3,19 @@
 #
 # 決定的・冪等な検証処理なので切り出している。手動確認でも代替可能。
 # Python 不要。POSIX sh と標準ツール（grep/sed/test 等）のみで動作する。
+# `pipefail` を使うため、pipefail 対応の sh（POSIX.1-2024 準拠、または dash 0.5.12 以降・
+# bash・ksh・zsh）が必要。
 #
 # チェック内容:
-#   1. 本体から `.agents/docs/*.md` へのプレーン参照の参照切れ（問題として報告）。
+#   1. 本体から docs への参照切れ（問題として報告）。
+#      Markdownリンク形式 `[...](.agents/docs/foo.md)` / `[...](docs/foo.md)` を対象に、
+#      リポジトリモード（`.agents/docs/`）とグローバルモード（`docs/`）の両方を解決する
+#      （いずれも本体の親ディレクトリ基準）。素のパス記述（リンクでない地の文）は、
+#      ディレクトリ構成の説明等と区別できず偽陽性を生むため機械チェックの対象外。
 #   2. 本体の `@`参照の検出（禁止ではなく、意図的な常時読み込みか確認を促す警告）。
 #      `@`参照は「常時コンテキストに読み込ませたい」設計意図がある場合は許容される。
 #      検出しても、それ単独では終了コードを 1 にしない。
+#      パス様（`/` か `.` を含む）の `@xxx` のみ対象とし、`@mention` 等は除外する。
 #
 # 使い方:
 #   ./check_references.sh [AGENTS.mdのパス]
@@ -16,12 +23,20 @@
 #
 # 終了コード: 参照切れがあれば 1、なければ 0（`@`参照の検出だけでは 1 にしない）。
 
-set -euo pipefail
+set -eu
+set -o pipefail   # 別行にして -euo 連結形のシェル差を避ける（pipefail対応shが前提）
+
+# grep ラッパー: マッチあり(0)/マッチなし(1) はどちらも正常、実エラー(>=2)は致命とする。
+# `|| true` で全ての非ゼロを握りつぶすと、ファイル不読等の実エラーも隠れてしまうため、
+# 終了コード 1（マッチなし）だけを正常へ畳み込み、それ以外は呼び出し元へ伝播させる。
+grep_safe() {
+    grep "$@" || [ "$?" -eq 1 ]
+}
 
 target="${1:-AGENTS.md}"
 
 if [ ! -f "$target" ]; then
-    echo "error: $target が見つからない" >&2
+    echo "error: $target not found" >&2
     exit 1
 fi
 
@@ -31,9 +46,13 @@ root=$(dirname "$target")
 problems=0
 notices=0
 
-# 1. .agents/docs/*.md への参照を抽出して実在を確認（参照切れは問題）
+# 1. Markdownリンク内の docs 参照を抽出して実在を確認（参照切れは問題）。
+#    `](docs/foo.md)` / `](.agents/docs/foo.md)` / `](./docs/foo.md)` / アンカー付き
+#    `](docs/foo.md#sec)` にマッチさせる。`](` と `)`・先頭 `./`・`#`以降を除去し、
 #    重複除去のうえ各パスを root 基準で test -f する。
-refs=$(grep -oE '\.agents/docs/[A-Za-z0-9._/-]+\.md' "$target" | sort -u || true)
+refs=$(grep_safe -oE '\]\((\./)?(\.agents/)?docs/[^)#]+\.md(#[^)]*)?\)' "$target" \
+    | sed -E 's/^\]\(//; s/\)$//; s/#.*$//; s/^\.\///' \
+    | sort -u)
 
 if [ -n "$refs" ]; then
     # IFS を改行のみにして 1 行ずつ処理する
@@ -42,18 +61,20 @@ if [ -n "$refs" ]; then
 '
     for ref in $refs; do
         if [ ! -f "$root/$ref" ]; then
-            echo "参照切れ: $ref が存在しない"
+            echo "broken reference: $ref not found"
             problems=$((problems + 1))
         fi
     done
     IFS=$OLDIFS
 fi
 
-# 2. @参照の検出（行頭または空白後の @path）。
+# 2. @参照の検出（行頭または空白後の、パス様の @path）。
 #    禁止ではなく、意図的な常時読み込みかの確認を促す警告。
-#    バッククォートで囲われたパッケージ名（`@types/node` 等）は直前が
-#    バッククォートのためマッチしない。
-notice_lines=$(grep -nE '(^|[[:space:]])@[A-Za-z0-9._/-]+' "$target" || true)
+#    `/` か `.` を含むものだけを対象とし、`@mention` 等を除外する。
+#    メールアドレス（`user@example.com` 等）は @ の直前が空白/行頭でないためマッチしない。
+#    バッククォートで囲われたパッケージ名（`@types/node` 等）も直前がバッククォートのため除外。
+at_pattern='(^|[[:space:]])@[A-Za-z0-9_~-]*[./][A-Za-z0-9._/~-]+'
+notice_lines=$(grep_safe -nE "$at_pattern" "$target")
 
 if [ -n "$notice_lines" ]; then
     OLDIFS=$IFS
@@ -64,14 +85,14 @@ if [ -n "$notice_lines" ]; then
         lineno=${entry%%:*}
         line=${entry#*:}
         # 行中の各 @参照を抽出して個別に報告する
-        matches=$(printf '%s\n' "$line" | grep -oE '(^|[[:space:]])@[A-Za-z0-9._/-]+' || true)
+        matches=$(printf '%s\n' "$line" | grep_safe -oE "$at_pattern")
         innerIFS=$IFS
         IFS='
 '
         for m in $matches; do
             # 先頭の空白を除去し @参照のみを取り出す
             ref=$(printf '%s' "$m" | sed -E 's/^[[:space:]]*//')
-            echo "${lineno}行目: @参照を検出 (${ref}) — 意図的な常時読み込み参照か確認すること"
+            echo "line ${lineno}: @-reference found (${ref}) — confirm it is an intentional always-load reference"
             notices=$((notices + 1))
         done
         IFS=$innerIFS
@@ -84,8 +105,8 @@ if [ "$problems" -gt 0 ]; then
 fi
 
 if [ "$notices" -gt 0 ]; then
-    echo "OK: 参照切れなし（上記 @参照は意図を確認すること）"
+    echo "OK: no broken references (confirm the @-references above are intentional)"
 else
-    echo "OK: 参照切れ・@参照なし"
+    echo "OK: no broken references, no @-references"
 fi
 exit 0
