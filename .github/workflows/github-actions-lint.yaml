@@ -1,0 +1,13 @@
+name: GitHub Actions Lint
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  github-actions-lint:
+    permissions:
+      contents: read
+    uses: cffnpwr/actions/.github/workflows/github-actions-lint.yaml@03825f885ab5edf937a4bb6a8b0a7d9759de21d3
