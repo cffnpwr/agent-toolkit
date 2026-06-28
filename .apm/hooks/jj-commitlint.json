@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/jj-commitlint/commitlint.sh ./scripts/jj-commitlint/main.ts ./scripts/jj-commitlint/command.ts ./scripts/jj-commitlint/config.ts ./scripts/jj-commitlint/input.ts ./scripts/jj-commitlint/lint.ts ./scripts/jj-commitlint/types.ts",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
