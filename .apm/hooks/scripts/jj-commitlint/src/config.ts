@@ -16,9 +16,6 @@ const CACHE_TTL = Number(env.JJ_COMMITLINT_CACHE_TTL ?? "3600");
 const CACHE_KEY = `${CONFIG_REPO}/${CONFIG_REF}/${CONFIG_PATH}`.replace(/[^a-zA-Z0-9._-]/g, "_");
 const CONFIG_CACHE_FILE = join(CACHE_DIR, CACHE_KEY);
 
-// commitlintは固定版をbunが実行時に取得・キャッシュする。
-export const COMMITLINT_PKG = "@commitlint/cli@20.5.3";
-
 // キャッシュの経過秒を返す。
 // 未取得ならnull、statSyncの失敗は呼び出し元へ伝播する。
 const cacheAgeSeconds = (): number | null => {

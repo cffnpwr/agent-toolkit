@@ -1,11 +1,15 @@
 {
-  "name": "apm-hooks",
+  "name": "jj-commitlint",
   "private": true,
   "type": "module",
   "scripts": {
     "lint": "eslint .",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@commitlint/lint": "20.5.3",
+    "@commitlint/load": "20.5.3"
   },
   "devDependencies": {
     "@cffnpwr/eslint-config": "1.2.0",

@@ -42,13 +42,13 @@ AI Agentへ渡す違反内容・警告は簡単な英語で出力する。
 
 | ファイル | 責務 |
 | --- | --- |
-| `scripts/jj-commitlint/commitlint.sh` | 起動スクリプト(jj事前フィルタ・bun存在確認) |
-| `scripts/jj-commitlint/main.ts` | エントリ・全体の制御・出力 |
-| `scripts/jj-commitlint/input.ts` | hook入力からコマンドを抽出 |
-| `scripts/jj-commitlint/command.ts` | コマンドのトークナイズと対象revの解析 |
-| `scripts/jj-commitlint/lint.ts` | jj説明取得・commitlint実行 |
-| `scripts/jj-commitlint/config.ts` | 設定の取得とキャッシュ |
-| `scripts/jj-commitlint/types.ts` | 共有型 |
+| `scripts/jj-commitlint/commitlint.sh` | 起動スクリプト(jj事前フィルタ・bun存在確認・依存同期) |
+| `scripts/jj-commitlint/src/main.ts` | エントリ・全体の制御・出力 |
+| `scripts/jj-commitlint/src/input.ts` | hook入力からコマンドを抽出 |
+| `scripts/jj-commitlint/src/command.ts` | コマンドのトークナイズと対象revの解析 |
+| `scripts/jj-commitlint/src/lint.ts` | jj説明取得・commitlint実行 |
+| `scripts/jj-commitlint/src/config.ts` | 設定の取得とキャッシュ |
+| `scripts/jj-commitlint/src/types.ts` | 共有型 |
 
 `command.ts`のトークナイザ・パーサには`command.test.ts`(`bun test`)でテストを置く。
 
@@ -67,9 +67,22 @@ AI Agentへ渡す違反内容・警告は簡単な英語で出力する。
 
 ### Requirements
 
-外部ツールがホスト側で利用可能であることを前提とする。
-不在時はfail-open(警告して通し、導入はユーザーに委ねる)。
-依存の導入・代替手段へのフォールバックが必要な場合は、進行を停止しユーザーへエスカレーションする。
+外部ツール(bun・jj)はホスト側で利用可能であることを前提とする。
+依存パッケージ(`@commitlint/lint`・`@commitlint/load`)は`scripts/jj-commitlint/package.json`・`scripts/jj-commitlint/bun.lock`で版を固定して同梱し、起動スクリプトがロックファイルから同期する。
+不在・同期失敗時はfail-open(警告して通し、導入はユーザーに委ねる)。
+
+#### 依存パッケージ
+
+| 言語 | パッケージマネージャ | 定義ファイル | ロックファイル | 同期コマンド |
+| --- | --- | --- | --- | --- |
+| JavaScript / TypeScript | bun | `scripts/jj-commitlint/package.json` | `scripts/jj-commitlint/bun.lock` | `bun install --frozen-lockfile --production --ignore-scripts` |
+
+| パッケージ | 確認バージョン |
+| --- | --- |
+| `@commitlint/lint` | `20.5.3` |
+| `@commitlint/load` | `20.5.3` |
+
+`apm install`は版固定の依存を導入しないため、`package.json`・`bun.lock`もマニフェストのコピー対象に含める。
 
 #### 外部ツール
 
@@ -77,11 +90,10 @@ AI Agentへ渡す違反内容・警告は簡単な英語で出力する。
 | --- | --- | --- |
 | bun | `1.3.14` | `command -v bun` |
 | jj | `0.42.0` | `command -v jj` |
-| `@commitlint/cli` | `20.5.3`(`bun x --bun`が初回取得・キャッシュ) | — |
 
 上表は動作確認したバージョン。
 下限は厳密には未検証のため要件として断定しない。
 
-外部コマンド呼び出しは`jj`とbun(`bun x --bun`)に限る。
+外部コマンド呼び出しは`jj`(説明取得)と依存同期の`bun install`に限る。commitlintは同梱ライブラリのAPIで実行する。
 設定取得はbun組み込みの`fetch`を使い、`gh`等の追加コマンドには依存しない。
-`bun`不在時は起動スクリプトが、設定取得失敗かつキャッシュ無し・`@commitlint/cli`取得失敗時は本体が、それぞれfail-open警告を出して通す。
+`bun`不在時・依存同期失敗時は起動スクリプトが、設定取得失敗かつキャッシュ無し・commitlintライブラリの読込/実行失敗時は本体が、それぞれfail-open警告を出して通す。

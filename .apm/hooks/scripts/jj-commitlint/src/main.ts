@@ -85,10 +85,10 @@ const run = async (): Promise<void> => {
       violations.push(`Commit message on rev ${rev} is empty.`);
       continue;
     }
-    const result = runCommitlint(message, configPath);
+    const result = await runCommitlint(message, configPath);
     if (result.unavailable) {
       warn(
-        "jj-commitlint: could not run commitlint (failed to fetch @commitlint/cli?). "
+        "jj-commitlint: could not run commitlint (bundled commitlint deps not synced?). "
         + `The commit message may violate user-defined rules.\n${result.report}`,
       );
       return;
