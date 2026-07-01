@@ -11,7 +11,7 @@
 
 スキルが「依存を持つ」のは、次のいずれかが存在する場合である。
 
-- `scripts/` 配下の同梱スクリプト（Python、Node.js、Bash、その他いずれの言語でも）。
+- `scripts/` 配下の同梱スクリプト（Python、JavaScript、Bash、その他いずれの言語でも）。
 - 定義ファイル（`pyproject.toml`、`package.json`、`Gemfile`、`composer.json`）を通じて宣言されたパッケージ化された依存。
 - スキルが呼び出す外部CLIまたはインタプリタ（git、docker、jq、言語ランタイムそのもの等）。
 
@@ -34,7 +34,7 @@ ls -la scripts/
 
 # Count by extension
 find scripts/ -type f -name "*.py"  | wc -l    # Python
-find scripts/ -type f -name "*.js"  | wc -l    # Node.js / TypeScript
+find scripts/ -type f -name "*.js"  | wc -l    # JavaScript / TypeScript
 find scripts/ -type f -name "*.sh"  | wc -l    # Bash
 # Repeat for .rb, .php, .pl, .ps1, .r, .lua
 ```
@@ -47,7 +47,7 @@ find scripts/ -type f -name "*.sh"  | wc -l    # Bash
 # Python
 cat scripts/pyproject.toml
 
-# Node.js / TypeScript
+# JavaScript / TypeScript
 cat scripts/package.json
 
 # Ruby
@@ -79,11 +79,11 @@ grep -h -E "subprocess|child_process|execa|spawn|exec" scripts/*.py scripts/*.js
 ```yaml
 # Python skill with packaged deps and the uv toolchain
 compatibility: |
-  Required: uv; Python deps via uv sync --frozen (pyproject.toml + uv.lock)
+  Required: uv; Python deps via uv sync --frozen --no-dev (pyproject.toml + uv.lock)
 
-# Node.js skill
+# JavaScript / TypeScript skill
 compatibility: |
-  Required: pnpm; Node deps via pnpm install --frozen-lockfile (package.json + pnpm-lock.yaml)
+  Required: bun; JS/TS deps via bun install --frozen-lockfile --production (package.json + bun.lock)
 
 # Bash skill calling external tools
 compatibility: |
@@ -107,7 +107,7 @@ Agentが従うべき規約を明記する。
 ```markdown
 ## Requirements
 
-Sync packaged dependencies from the committed lockfile before use (e.g. `uv sync --frozen`) —
+Sync packaged dependencies from the committed lockfile before use (e.g. `uv sync --frozen --no-dev`) —
 this touches only gitignored paths (`.venv`, `node_modules`) and is safe for the Agent
 to run. **Stop and escalate to the user** only if an external tool is missing, if
 dependencies must be added or updated, or if a fallback would be needed — the Agent
@@ -124,12 +124,12 @@ back to alternatives.
 
 | Language | Package manager | Definition file  | Lockfile          | Install command  |
 |----------|-----------------|------------------|-------------------|------------------|
-| Python   | uv              | pyproject.toml   | uv.lock           | `uv sync --frozen`        |
+| Python   | uv              | pyproject.toml   | uv.lock           | `uv sync --frozen --no-dev` |
 
 Sync dependencies from the committed lockfile (safe for the Agent to run):
 
 ```bash
-uv sync --frozen
+uv sync --frozen --no-dev
 ```
 ````
 
@@ -137,8 +137,8 @@ uv sync --frozen
 
 | 言語 | パッケージマネージャ | 定義ファイル | ロックファイル | インストールコマンド |
 |-----------------------|-----------------|------------------|-------------------|-------------------|
-| JavaScript/TypeScript | pnpm            | package.json     | pnpm-lock.yaml    | `pnpm install --frozen-lockfile`    |
-| Python                | uv              | pyproject.toml   | uv.lock           | `uv sync --frozen`         |
+| JavaScript/TypeScript | bun             | package.json     | bun.lock          | `bun install --frozen-lockfile --production` |
+| Python                | uv              | pyproject.toml   | uv.lock           | `uv sync --frozen --no-dev` |
 | Ruby                  | bundler         | Gemfile          | Gemfile.lock      | `bundle install`  |
 | PHP                   | composer        | composer.json    | composer.lock     | `composer install`|
 
@@ -172,16 +172,16 @@ command -v git >/dev/null 2>&1 || { echo "git not found; stop and escalate." >&2
 # Python: run inside the uv environment
 uv run python scripts/process.py <args>
 
-# Node.js: run through pnpm
-pnpm exec tsx scripts/process.ts <args>
-pnpm run build
+# JavaScript / TypeScript: run through bun
+bun scripts/process.ts <args>
+bun run build
 ```
 
 ## 言語ごとの注意
 
 ### 標準ロックファイルのパッケージマネージャを持つ言語
 
-JavaScript/TypeScript、Python、Ruby、PHPでは、上記の定義ファイルとロックファイルを通じてパッケージ化された依存を宣言する。バージョンはロックファイルで固定し、両ファイルを同梱する。ランタイム（`node`、`python`、`ruby`、`php`）とパッケージマネージャ（`pnpm`、`uv`、`bundler`、`composer`）は「External tools」サブセクションに置く。
+JavaScript/TypeScript、Python、Ruby、PHPでは、上記の定義ファイルとロックファイルを通じてパッケージ化された依存を宣言する。バージョンはロックファイルで固定し、両ファイルを同梱する。ランタイムとパッケージマネージャ（JavaScript/TypeScriptは`bun`が両者を兼ねる、Pythonは`python`+`uv`、Rubyは`ruby`+`bundler`、PHPは`php`+`composer`）は「External tools」サブセクションに置く。
 
 ### Bash
 

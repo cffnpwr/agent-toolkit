@@ -13,7 +13,7 @@
 依存検出は確実に観測可能なファイル存在に基づく（言語横断で堅牢でないimport解析は
 行わない）。次のいずれかが存在する場合にスキルは依存を持つとみなす。
 - 依存定義ファイル（pyproject.toml / package.json / Gemfile / composer.json）
-- ロックファイル（uv.lock / pnpm-lock.yaml / Gemfile.lock / composer.lock）
+- ロックファイル（uv.lock / bun.lock / Gemfile.lock / composer.lock）
 - scripts/ 配下の任意のスクリプト言語ファイル
 
 Requires: Python 3.11+, PyYAML
@@ -32,14 +32,14 @@ if sys.version_info < (3, 11):
 try:
     import yaml
 except ImportError:
-    print("Error: PyYAML is required (declared in pyproject.toml). Run 'uv sync --frozen'.")
+    print("Error: PyYAML is required (declared in pyproject.toml). Run 'uv sync --frozen --no-dev'.")
     sys.exit(1)
 
 
 # 依存定義ファイル -> 必要なロックファイル
 DEFINITION_LOCKFILES = {
     "pyproject.toml": "uv.lock",
-    "package.json": "pnpm-lock.yaml",
+    "package.json": "bun.lock",
     "Gemfile": "Gemfile.lock",
     "composer.json": "composer.lock",
 }
@@ -48,7 +48,7 @@ LOCKFILES = set(DEFINITION_LOCKFILES.values())
 
 SCRIPT_EXTENSIONS = {
     ".py": "Python",
-    ".js": "Node.js",
+    ".js": "JavaScript",
     ".ts": "TypeScript",
     ".sh": "Bash",
     ".rb": "Ruby",
@@ -153,8 +153,8 @@ def validate_dependencies(skill_dir, frontmatter, content):
         compat_lower = compat_str.lower()
         language_hints = {
             "Python": ["python"],
-            "Node.js": ["node", "javascript"],
-            "TypeScript": ["typescript", "node"],
+            "JavaScript": ["javascript", "node", "bun"],
+            "TypeScript": ["typescript", "node", "bun"],
             "Bash": ["bash", "shell"],
             "Ruby": ["ruby"],
             "Perl": ["perl"],

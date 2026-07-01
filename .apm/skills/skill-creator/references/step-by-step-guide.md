@@ -242,7 +242,7 @@ pdf-editor/
 パッケージ化された依存を要するスクリプトは、その都度パッケージをインストールするのではなく、同梱されロックされた環境に対して実行しなければならない。言語ごとのパッケージマネージャのランナーを通じて実行する。例えば以下のとおり。
 
 - Python: `uv run python scripts/extract.py`
-- JS/TS: `pnpm exec node scripts/extract.js`
+- JS/TS: `bun scripts/extract.ts`
 - Ruby: `bundle exec ruby scripts/extract.rb`
 - PHP: `composer exec -- php scripts/extract.php`
 
@@ -361,7 +361,7 @@ compatibility: |
 
 ### `## Requirements` セクション
 
-これは正式な詳細である。前文では、依存パッケージはコミット済みロックファイルから同期してよいこと（`uv sync --frozen` 等はgit検知の更新を生まないためエージェントが実行してよい）、外部ツールの不在・依存の追加更新・フォールバックが必要な場合はSTOPしてユーザーへエスカレーションすること、外部ツールの導入や依存宣言・ロックファイルの変更は行わないことを述べることから始める。
+これは正式な詳細である。前文では、依存パッケージはコミット済みロックファイルから同期してよいこと（`uv sync --frozen --no-dev` 等はgit検知の更新を生まないためエージェントが実行してよい）、外部ツールの不在・依存の追加更新・フォールバックが必要な場合はSTOPしてユーザーへエスカレーションすること、外部ツールの導入や依存宣言・ロックファイルの変更は行わないことを述べることから始める。
 
 続いて該当する表を含める。
 
@@ -369,8 +369,8 @@ compatibility: |
 
 | 言語 | パッケージマネージャ | 定義ファイル | ロックファイル | インストールコマンド |
 | --- | --- | --- | --- | --- |
-| JS/TS | pnpm | `package.json` | `pnpm-lock.yaml` | `pnpm install --frozen-lockfile` |
-| Python | uv | `pyproject.toml` | `uv.lock` | `uv sync --frozen` |
+| JS/TS | bun | `package.json` | `bun.lock` | `bun install --frozen-lockfile --production` |
+| Python | uv | `pyproject.toml` | `uv.lock` | `uv sync --frozen --no-dev` |
 | Ruby | bundler | `Gemfile` | `Gemfile.lock` | `bundle install` |
 | PHP | composer | `composer.json` | `composer.lock` | `composer install` |
 
@@ -389,8 +389,8 @@ compatibility: |
 
 各言語の標準的なパッケージマネージャを使い、そのロックファイルを同梱する。
 
-- **JS/TS** → pnpm（`package.json` / `pnpm-lock.yaml` / `pnpm install --frozen-lockfile`）
-- **Python** → uv（`pyproject.toml` / `uv.lock` / `uv sync --frozen`）
+- **JS/TS** → bun（`package.json` / `bun.lock` / `bun install --frozen-lockfile --production`）
+- **Python** → uv（`pyproject.toml` / `uv.lock` / `uv sync --frozen --no-dev`）
 - **Ruby** → bundler（`Gemfile` / `Gemfile.lock` / `bundle install`）
 - **PHP** → composer（`composer.json` / `composer.lock` / `composer install`）
 
@@ -482,7 +482,7 @@ Checks to perform:
 1. Inspect scripts/ for languages and third-party imports/requires.
 2. For each language with packaged deps, confirm:
    - The definition file and lockfile are bundled.
-   - The package manager matches the standard (Python→uv, JS/TS→pnpm,
+   - The package manager matches the standard (Python→uv, JS/TS→bun,
      Ruby→bundler, PHP→composer).
 3. Identify external CLIs the scripts shell out to or the SKILL.md tells the
    agent to run.

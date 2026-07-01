@@ -271,7 +271,7 @@ uv run python scripts/extract_text.py --input [file] --method [method]
 
 ## ワークフローにおける依存の考慮
 
-ワークフローが同梱スクリプト・パッケージ化された依存・外部CLIツールに依存する場合、スキルはそれらの依存を2つの同期された場所で宣言する。すなわち `compatibility` フロントマターフィールド（1〜2行の要約）と `## Requirements` セクション（Dependency packagesテーブルおよび/またはExternal toolsテーブル）である。ワークフロー自体は使用前に依存パッケージをロックファイルから同期する（`uv sync --frozen` 等はgit検知の更新を生まないためAgentが実行してよい）。外部ツールが不在、または依存の追加・更新やフォールバックが必要な場合は、Agentは停止してエスカレーションする。外部ツールの導入や依存宣言の変更はしない。
+ワークフローが同梱スクリプト・パッケージ化された依存・外部CLIツールに依存する場合、スキルはそれらの依存を2つの同期された場所で宣言する。すなわち `compatibility` フロントマターフィールド（1〜2行の要約）と `## Requirements` セクション（Dependency packagesテーブルおよび/またはExternal toolsテーブル）である。ワークフロー自体は使用前に依存パッケージをロックファイルから同期する（`uv sync --frozen --no-dev` 等はgit検知の更新を生まないためAgentが実行してよい）。外部ツールが不在、または依存の追加・更新やフォールバックが必要な場合は、Agentは停止してエスカレーションする。外部ツールの導入や依存宣言の変更はしない。
 
 ### パターン: 依存を意識したワークフロー
 
@@ -285,8 +285,8 @@ dependencies, sync the environment; for external tools, check existence and
 version.
 
 ```bash
-uv sync --frozen                         # Sync the bundled Python environment
-ffmpeg -version                 # Check external CLI tool
+uv sync --frozen --no-dev   # Sync the bundled Python environment
+ffmpeg -version             # Check external CLI tool
 ```
 
 If a dependency is missing:
@@ -306,11 +306,11 @@ If a dependency is missing:
 ### Requirements Check
 
 ```bash
-uv sync --frozen                         # Sync bundled Python deps (Pillow, imageio)
+uv sync --frozen --no-dev   # Sync bundled Python deps (Pillow, imageio)
 ```
 
 If the sync fails or the environment cannot be created:
-> "This skill requires its bundled Python environment. Run `uv sync --frozen` from the
+> "This skill requires its bundled Python environment. Run `uv sync --frozen --no-dev` from the
 > skill directory; if it fails, report the error."
 
 ### Step 1: Load Image
@@ -353,5 +353,5 @@ uv run python scripts/load_image.py --input [file]
 
 **依存について:**
 - `compatibility` フィールドと `## Requirements` セクションの両方で依存を宣言する
-- 依存パッケージはロックファイルから同期する（`uv sync --frozen` 等はAgentが実行してよい）
+- 依存パッケージはロックファイルから同期する（`uv sync --frozen --no-dev` 等はAgentが実行してよい）
 - 外部ツール不在・依存の追加更新・フォールバックが必要な場合は停止してエスカレーションする。外部ツールの導入や依存宣言の変更はしない
