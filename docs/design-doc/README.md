@@ -1,4 +1,4 @@
-# agent-skills Design Doc
+# agent-toolkit Design Doc
 
 AI Agent向けのスキルとhookを、Harness非依存に宣言し、ホスト環境で再現的に動かすためのパッケージの設計。
 

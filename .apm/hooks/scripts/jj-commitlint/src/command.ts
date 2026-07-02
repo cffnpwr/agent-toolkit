@@ -1,55 +1,11 @@
+import type { DoubleQuotedChild, Node, Word, WordPart } from "unbash";
+
+import { parse } from "unbash";
+
 import type { Target } from "./types.ts";
 
-// 引用符を考慮した最小トークナイザ。
-// 必要なのはフラグとrevsetだけなので、厳密なシェル解析でなく近似分割で機能的に十分。
-export const tokenize = (command: string): string[] => {
-  const tokens: string[] = [];
-  let cur = "";
-  let i = 0;
-  let has = false;
-  const push = () => {
-    if (has) tokens.push(cur);
-    cur = "";
-    has = false;
-  };
-  while (i < command.length) {
-    const ch = command[i];
-    if (ch === "'") {
-      has = true;
-      i++;
-      while (i < command.length && command[i] !== "'") cur += command[i++];
-      i++;
-    } else if (ch === "\"") {
-      has = true;
-      i++;
-      while (i < command.length && command[i] !== "\"") {
-        if (command[i] === "\\" && i + 1 < command.length) {
-          i++;
-          cur += command[i++];
-        } else {
-          cur += command[i++];
-        }
-      }
-      i++;
-    } else if (ch === "\\" && i + 1 < command.length) {
-      has = true;
-      i++;
-      cur += command[i++];
-    } else if ((/\s/).test(ch)) {
-      push();
-      i++;
-    } else {
-      has = true;
-      cur += ch;
-      i++;
-    }
-  }
-  push();
-  return tokens;
-};
-
-// 値を取る(次トークンを消費する)フラグ。
-// 値をrevsetと誤認しないために列挙する。
+// 値を取る(次の語を消費する)フラグ。
+// 値をrevisionと誤認しないために列挙する。
 const VALUE_FLAGS = new Set([
   "-m",
   "--message",
@@ -66,29 +22,79 @@ const VALUE_FLAGS = new Set([
   "--color",
 ]);
 
+// ASTから、演算子(&&, ||, ;, |)で結ばれた各simple commandの語列を集める。
+// 実行を伴う置換($(...), `...`, <(...), >(...))の内部スクリプトも走査する。
+// サブシェル・if等の複合構文と算術展開の内部には入らない。
+const collectFromNode = (node: Node, segments: string[][]): void => {
+  switch (node.type) {
+    case "Statement":
+      collectFromNode(node.command, segments);
+      break;
+    case "AndOr":
+    case "Pipeline":
+      for (const child of node.commands) collectFromNode(child, segments);
+      break;
+    case "Command": {
+      const words: string[] = [];
+      if (node.name) words.push(node.name.value);
+      for (const word of node.suffix) words.push(word.value);
+      if (words.length > 0) segments.push(words);
+
+      // simple commandに属する全Wordのpartsを走査し、置換の内部スクリプトを拾う。
+      const heldWords: (Word | undefined)[] = [node.name, ...node.suffix];
+      for (const assign of node.prefix) heldWords.push(assign.value);
+      for (const redirect of node.redirects) heldWords.push(redirect.target, redirect.body);
+      const parts: (DoubleQuotedChild | WordPart)[] = [];
+      const pushParts = (word: Word | undefined): void => {
+        if (word?.parts) parts.push(...word.parts);
+      };
+      for (const word of heldWords) pushParts(word);
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        switch (part.type) {
+          case "CommandExpansion":
+          case "ProcessSubstitution":
+            for (const statement of part.script?.commands ?? []) {
+              collectFromNode(statement, segments);
+            }
+            break;
+          case "DoubleQuoted":
+          case "LocaleString":
+            parts.push(...part.parts);
+            break;
+          case "ParameterExpansion":
+            pushParts(part.operand);
+            pushParts(part.slice?.offset);
+            pushParts(part.slice?.length);
+            pushParts(part.replace?.pattern);
+            pushParts(part.replace?.replacement);
+            break;
+          default:
+            break;
+        }
+      }
+      break;
+    }
+    default:
+      break;
+  }
+};
+
 /**
- * コマンド文字列を区切り(&&, ||, ;, |)で分割する。
- * 各セグメントからjj describe/commit呼び出しを抽出して対象revを解決する。
+ * コマンド文字列をパースし、simple commandごとにjj describe/commit呼び出しを抽出して
+ * 対象revisionを解決する。
  */
 export const parseTargets = (command: string): Target[] => {
-  const tokens = tokenize(command);
-  const segments: string[][] = [[]];
-  for (const t of tokens) {
-    if (t === "&&" || t === "||" || t === ";" || t === "|") {
-      segments.push([]);
-    } else {
-      segments[segments.length - 1].push(t);
-    }
-  }
+  const segments: string[][] = [];
+  for (const statement of parse(command).commands) collectFromNode(statement, segments);
 
   const targets: Target[] = [];
   for (const seg of segments) {
-    // jjバイナリトークンの直後にサブコマンドが来る形を探す。
-    const jjIdx = seg.findIndex((t) => t === "jj" || t.endsWith("/jj"));
-    if (jjIdx < 0) continue;
+    // コマンド名がjjバイナリ(jj または .../jj)の呼び出しだけを対象にする。
+    if (seg[0] !== "jj" && !seg[0].endsWith("/jj")) continue;
     // jjの後ろで最初に現れる非グローバルフラグをサブコマンドとみなす。
     let subIdx = -1;
-    for (let k = jjIdx + 1; k < seg.length; k++) {
+    for (let k = 1; k < seg.length; k++) {
       const t = seg[k];
       if (t.startsWith("-")) {
         if (VALUE_FLAGS.has(t)) k++;

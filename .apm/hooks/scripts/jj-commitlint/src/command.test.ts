@@ -1,36 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { parseTargets, tokenize } from "./command.ts";
-
-describe("tokenize", () => {
-  test("[positive] 空白区切りのとき、トークンに分割する", () => {
-    expect(tokenize("jj describe -m x")).toEqual(["jj", "describe", "-m", "x"]);
-  });
-
-  test("[positive] ダブルクオート内に空白があるとき、1トークンにまとめる", () => {
-    expect(tokenize("jj describe -m \"feat: x\"")).toEqual(["jj", "describe", "-m", "feat: x"]);
-  });
-
-  test("[positive] シングルクオート内にバックスラッシュがあるとき、エスケープを解釈しない", () => {
-    expect(tokenize("jj describe -m 'a \\n b'")).toEqual(["jj", "describe", "-m", "a \\n b"]);
-  });
-
-  test("[positive] ダブルクオート内にエスケープがあるとき、次の文字を解く", () => {
-    expect(tokenize("jj describe -m \"a \\\"q\\\" b\"")).toEqual(["jj", "describe", "-m", "a \"q\" b"]);
-  });
-
-  test("[negative] 空のクオートのとき、空文字トークンを保持する", () => {
-    expect(tokenize("jj describe -m \"\"")).toEqual(["jj", "describe", "-m", ""]);
-  });
-
-  test("[negative] 空白が連続するとき、1区切りとして扱う", () => {
-    expect(tokenize("jj  describe")).toEqual(["jj", "describe"]);
-  });
-
-  test("[negative] クオート外にバックスラッシュがあるとき、次の文字をエスケープする", () => {
-    expect(tokenize("jj describe foo\\ bar")).toEqual(["jj", "describe", "foo bar"]);
-  });
-});
+import { parseTargets } from "./command.ts";
 
 describe("parseTargets", () => {
   test("[positive] describeでrev指定が無いとき、既定の@になる", () => {
@@ -94,6 +64,12 @@ describe("parseTargets", () => {
     ]);
   });
 
+  test("[positive] ;で連結されたとき、jjセグメントから抽出する", () => {
+    expect(parseTargets("git status; jj describe -m \"y\"")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+    ]);
+  });
+
   test("[negative] 非対象コマンドのとき、空になる", () => {
     expect(parseTargets("ls -la")).toEqual([]);
     expect(parseTargets("jj log")).toEqual([]);
@@ -131,5 +107,43 @@ describe("parseTargets", () => {
     expect(parseTargets("jj describe -r")).toEqual([
       { subcommand: "describe", revs: ["@"] },
     ]);
+  });
+
+  test("[positive] 引用符付きメッセージに演算子があるとき、セグメントを分割しない", () => {
+    expect(parseTargets("jj describe -m \"a && b | c\"")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+    ]);
+  });
+
+  test("[positive] リダイレクトがあるとき、revsetと誤認しない", () => {
+    expect(parseTargets("jj describe -m x > /dev/null")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+    ]);
+  });
+
+  test("[positive] コマンド置換の内部にjjがあるとき、対象にする", () => {
+    expect(parseTargets("echo \"$(jj describe -m x)\"")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+    ]);
+  });
+
+  test("[positive] バッククオートの内部にjjがあるとき、対象にする", () => {
+    expect(parseTargets("echo `jj commit -m x`")).toEqual([
+      { subcommand: "commit", revs: ["@-"] },
+    ]);
+  });
+
+  test("[positive] 代入値のコマンド置換の内部にjjがあるとき、対象にする", () => {
+    expect(parseTargets("FOO=$(jj describe -r abc -m x) git status")).toEqual([
+      { subcommand: "describe", revs: ["abc"] },
+    ]);
+  });
+
+  test("[negative] コマンド名以外の位置にjjがあるとき、対象にしない", () => {
+    expect(parseTargets("echo jj describe -m x")).toEqual([]);
+  });
+
+  test("[negative] サブシェルの内部にjjがあるとき、対象にしない", () => {
+    expect(parseTargets("(jj describe -m x)")).toEqual([]);
   });
 });

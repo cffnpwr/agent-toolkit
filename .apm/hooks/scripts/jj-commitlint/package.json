@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@commitlint/lint": "20.5.3",
-    "@commitlint/load": "20.5.3"
+    "@commitlint/load": "20.5.3",
+    "unbash": "4.0.2"
   },
   "devDependencies": {
     "@cffnpwr/eslint-config": "1.2.0",
