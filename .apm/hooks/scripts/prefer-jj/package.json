@@ -1,0 +1,22 @@
+{
+  "name": "prefer-jj",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "unbash": "4.0.2"
+  },
+  "devDependencies": {
+    "@cffnpwr/eslint-config": "1.2.0",
+    "@types/bun": "1.3.14",
+    "@typescript-eslint/parser": "8.62.0",
+    "eslint": "10.6.0",
+    "globals": "17.7.0",
+    "jiti": "2.7.0",
+    "typescript": "6.0.3"
+  }
+}
