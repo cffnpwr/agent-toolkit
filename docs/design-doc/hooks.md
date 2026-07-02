@@ -2,7 +2,6 @@
 
 hookは、Harnessのツール実行に介入してルールを適用する成果物。
 `.apm/hooks/`に置き、個別hookの実装はこの方針に従う。
-具体例はjj-commitlint（[`.apm/hooks/README.md`](../../.apm/hooks/README.md)）を参照。
 
 ## 配置規約
 
