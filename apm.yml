@@ -1,6 +1,6 @@
-name: agent-skills
+name: agent-toolkit
 version: 1.0.0
-description: cffnpwr's agent skills
+description: cffnpwr's agent toolkit
 author: cffnpwr
 license: MIT
 type: skill
