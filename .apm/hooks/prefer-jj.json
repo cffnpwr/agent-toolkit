@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/prefer-jj/prefer-jj.sh ./scripts/prefer-jj/src/main.ts ./scripts/prefer-jj/src/command.ts ./scripts/prefer-jj/src/classify.ts ./scripts/prefer-jj/src/input.ts ./scripts/prefer-jj/src/types.ts ./scripts/prefer-jj/package.json ./scripts/prefer-jj/bun.lock",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
