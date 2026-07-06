@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/command-chain-guard/command-chain-guard.sh ./scripts/command-chain-guard/src/main.ts ./scripts/command-chain-guard/src/command.ts ./scripts/command-chain-guard/src/input.ts ./scripts/command-chain-guard/src/types.ts ./scripts/command-chain-guard/package.json ./scripts/command-chain-guard/bun.lock",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
