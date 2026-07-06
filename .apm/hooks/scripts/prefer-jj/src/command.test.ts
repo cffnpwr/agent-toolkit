@@ -76,8 +76,73 @@ describe("parseGitCalls", () => {
     expect(parseGitCalls("diff <(git diff) file")).toEqual([{ subcommand: "diff", args: [] }]);
   });
 
-  test("[negative] サブシェルの内部のgitは追わない", () => {
-    expect(parseGitCalls("(git status)")).toEqual([]);
+  test("[positive] サブシェルの内部のgitを抽出する", () => {
+    expect(parseGitCalls("(git status)")).toEqual([{ subcommand: "status", args: [] }]);
+  });
+
+  test("[positive] ブレースグループの内部のgitを抽出する", () => {
+    expect(parseGitCalls("{ git status; }")).toEqual([{ subcommand: "status", args: [] }]);
+  });
+
+  test("[positive] forの本体のgitを抽出する", () => {
+    expect(parseGitCalls("for f in a b; do git add x; done")).toEqual([
+      { subcommand: "add", args: ["x"] },
+    ]);
+  });
+
+  test("[positive] ifの条件・then・elseのgitを抽出する", () => {
+    expect(parseGitCalls("if git fetch; then git status; else git log; fi")).toEqual([
+      { subcommand: "fetch", args: [] },
+      { subcommand: "status", args: [] },
+      { subcommand: "log", args: [] },
+    ]);
+  });
+
+  test("[positive] elif節のgitを抽出する", () => {
+    expect(parseGitCalls("if true; then ls; elif git status; then ls; fi")).toEqual([
+      { subcommand: "status", args: [] },
+    ]);
+  });
+
+  test("[positive] whileの条件と本体のgitを抽出する", () => {
+    expect(parseGitCalls("while git fetch; do git status; done")).toEqual([
+      { subcommand: "fetch", args: [] },
+      { subcommand: "status", args: [] },
+    ]);
+  });
+
+  test("[positive] 関数定義の本体のgitを抽出する", () => {
+    expect(parseGitCalls("f() { git status; }")).toEqual([{ subcommand: "status", args: [] }]);
+  });
+
+  test("[positive] caseの各項のgitを抽出する", () => {
+    expect(parseGitCalls("case x in a) git status ;; *) git log ;; esac")).toEqual([
+      { subcommand: "status", args: [] },
+      { subcommand: "log", args: [] },
+    ]);
+  });
+
+  test("[positive] 入れ子の複合構文の内部のgitを抽出する", () => {
+    expect(parseGitCalls("for f in a; do if true; then git status; fi; done")).toEqual([
+      { subcommand: "status", args: [] },
+    ]);
+  });
+
+  test("[negative] [[ ]]の内部の語はコマンドとして抽出しない", () => {
+    expect(parseGitCalls("[[ git == git ]] && [[ -n git ]]")).toEqual([]);
+  });
+
+  test("[positive] [[ ]]の内部のコマンド置換のgitを抽出する", () => {
+    expect(parseGitCalls("[[ -n $(git status) ]]")).toEqual([
+      { subcommand: "status", args: [] },
+    ]);
+  });
+
+  test("[positive] [[ ]]の二項式・入れ子の条件式の内部のコマンド置換のgitを抽出する", () => {
+    expect(parseGitCalls("[[ ! ( $(git log) == $(git diff) || -z x ) ]]")).toEqual([
+      { subcommand: "log", args: [] },
+      { subcommand: "diff", args: [] },
+    ]);
   });
 
   test("[negative] gitにサブコマンドが無いとき、抽出しない", () => {

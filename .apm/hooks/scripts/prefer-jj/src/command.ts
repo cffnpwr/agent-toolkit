@@ -1,4 +1,4 @@
-import type { Command, DoubleQuotedChild, Node, Word, WordPart } from "unbash";
+import type { Command, DoubleQuotedChild, Node, TestExpression, Word, WordPart } from "unbash";
 
 import { parse } from "unbash";
 
@@ -23,10 +23,60 @@ const GIT_VALUE_FLAGS = new Set([
   "--attr-source",
 ]);
 
+// [[ ]]の条件式ツリーからoperandのWordを集める。
+const testExpressionWords = (expr: TestExpression): Word[] => {
+  switch (expr.type) {
+    case "TestUnary":
+      return [expr.operand];
+    case "TestBinary":
+      return [expr.left, expr.right];
+    case "TestLogical":
+      return [...testExpressionWords(expr.left), ...testExpressionWords(expr.right)];
+    case "TestNot":
+      return testExpressionWords(expr.operand);
+    case "TestGroup":
+      return testExpressionWords(expr.expression);
+  }
+};
+
 // ASTから、演算子(&&, ||, ;, |, 改行)で結ばれた各simple commandを集める。
-// 実行を伴う置換($(...), `...`, <(...), >(...))の内部スクリプトも走査する。
-// サブシェル・if等の複合構文と算術展開の内部には入らない。
+// 実行を伴う置換($(...), `...`, <(...), >(...))の内部スクリプトと、
+// サブシェル・if・for等の複合構文の本体も再帰的に走査する。
+// [[ ]]はoperand内の置換のみ走査する。算術式の内部には入らない。
 const collectCommands = (node: Node, out: Command[]): void => {
+  // Wordの並びのpartsを走査し、置換の内部スクリプトからコマンドを集める。
+  const collectFromWords = (words: (Word | undefined)[]): void => {
+    const parts: (DoubleQuotedChild | WordPart)[] = [];
+    const pushParts = (word: Word | undefined): void => {
+      if (word?.parts) parts.push(...word.parts);
+    };
+    for (const word of words) pushParts(word);
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      switch (part.type) {
+        case "CommandExpansion":
+        case "ProcessSubstitution":
+          for (const statement of part.script?.commands ?? []) {
+            collectCommands(statement, out);
+          }
+          break;
+        case "DoubleQuoted":
+        case "LocaleString":
+          parts.push(...part.parts);
+          break;
+        case "ParameterExpansion":
+          pushParts(part.operand);
+          pushParts(part.slice?.offset);
+          pushParts(part.slice?.length);
+          pushParts(part.replace?.pattern);
+          pushParts(part.replace?.replacement);
+          break;
+        default:
+          break;
+      }
+    }
+  };
+
   switch (node.type) {
     case "Statement":
       collectCommands(node.command, out);
@@ -35,6 +85,33 @@ const collectCommands = (node: Node, out: Command[]): void => {
     case "Pipeline":
       for (const child of node.commands) collectCommands(child, out);
       break;
+    case "CompoundList":
+      for (const statement of node.commands) collectCommands(statement, out);
+      break;
+    case "Subshell":
+    case "BraceGroup":
+    case "For":
+    case "ArithmeticFor":
+    case "Select":
+    case "Function":
+    case "Coproc":
+      collectCommands(node.body, out);
+      break;
+    case "While":
+      collectCommands(node.clause, out);
+      collectCommands(node.body, out);
+      break;
+    case "If":
+      collectCommands(node.clause, out);
+      collectCommands(node.then, out);
+      if (node.else) collectCommands(node.else, out);
+      break;
+    case "Case":
+      for (const item of node.items) collectCommands(item.body, out);
+      break;
+    case "TestCommand":
+      collectFromWords(testExpressionWords(node.expression));
+      break;
     case "Command": {
       out.push(node);
 
@@ -42,35 +119,7 @@ const collectCommands = (node: Node, out: Command[]): void => {
       const heldWords: (Word | undefined)[] = [node.name, ...node.suffix];
       for (const assign of node.prefix) heldWords.push(assign.value);
       for (const redirect of node.redirects) heldWords.push(redirect.target, redirect.body);
-      const parts: (DoubleQuotedChild | WordPart)[] = [];
-      const pushParts = (word: Word | undefined): void => {
-        if (word?.parts) parts.push(...word.parts);
-      };
-      for (const word of heldWords) pushParts(word);
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        switch (part.type) {
-          case "CommandExpansion":
-          case "ProcessSubstitution":
-            for (const statement of part.script?.commands ?? []) {
-              collectCommands(statement, out);
-            }
-            break;
-          case "DoubleQuoted":
-          case "LocaleString":
-            parts.push(...part.parts);
-            break;
-          case "ParameterExpansion":
-            pushParts(part.operand);
-            pushParts(part.slice?.offset);
-            pushParts(part.slice?.length);
-            pushParts(part.replace?.pattern);
-            pushParts(part.replace?.replacement);
-            break;
-          default:
-            break;
-        }
-      }
+      collectFromWords(heldWords);
       break;
     }
     default:

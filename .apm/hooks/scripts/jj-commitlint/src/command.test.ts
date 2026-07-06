@@ -143,7 +143,72 @@ describe("parseTargets", () => {
     expect(parseTargets("echo jj describe -m x")).toEqual([]);
   });
 
-  test("[negative] サブシェルの内部にjjがあるとき、対象にしない", () => {
-    expect(parseTargets("(jj describe -m x)")).toEqual([]);
+  test("[positive] サブシェルの内部にjjがあるとき、対象にする", () => {
+    expect(parseTargets("(jj describe -m x)")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+    ]);
+  });
+
+  test("[positive] ブレースグループの内部にjjがあるとき、対象にする", () => {
+    expect(parseTargets("{ jj describe -m x; }")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+    ]);
+  });
+
+  test("[positive] forの本体にjjがあるとき、対象にする", () => {
+    expect(parseTargets("for f in a b; do jj describe -r abc -m x; done")).toEqual([
+      { subcommand: "describe", revs: ["abc"] },
+    ]);
+  });
+
+  test("[positive] ifの条件・then・elseにjjがあるとき、対象にする", () => {
+    expect(parseTargets("if jj describe -m x; then jj commit -m y; else jj desc -m z; fi")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+      { subcommand: "commit", revs: ["@-"] },
+      { subcommand: "describe", revs: ["@"] },
+    ]);
+  });
+
+  test("[positive] whileの条件と本体にjjがあるとき、対象にする", () => {
+    expect(parseTargets("while jj describe -m x; do jj commit -m y; done")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+      { subcommand: "commit", revs: ["@-"] },
+    ]);
+  });
+
+  test("[positive] 関数定義の本体にjjがあるとき、対象にする", () => {
+    expect(parseTargets("f() { jj commit -m x; }")).toEqual([
+      { subcommand: "commit", revs: ["@-"] },
+    ]);
+  });
+
+  test("[positive] caseの各項にjjがあるとき、対象にする", () => {
+    expect(parseTargets("case x in a) jj describe -m x ;; *) jj commit -m y ;; esac")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+      { subcommand: "commit", revs: ["@-"] },
+    ]);
+  });
+
+  test("[positive] 入れ子の複合構文の内部にjjがあるとき、対象にする", () => {
+    expect(parseTargets("for f in a; do if true; then jj describe -m x; fi; done")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+    ]);
+  });
+
+  test("[negative] [[ ]]の内部の語を対象にしない", () => {
+    expect(parseTargets("[[ jj == describe ]] && [[ -n jj ]]")).toEqual([]);
+  });
+
+  test("[positive] [[ ]]の内部のコマンド置換にjjがあるとき、対象にする", () => {
+    expect(parseTargets("[[ -n $(jj describe -m x) ]]")).toEqual([
+      { subcommand: "describe", revs: ["@"] },
+    ]);
+  });
+
+  test("[positive] [[ ]]の二項式・入れ子の条件式の内部のコマンド置換にjjがあるとき、対象にする", () => {
+    expect(parseTargets("[[ ! ( $(jj describe -r abc -m x) == $(jj commit -m y) ) ]]")).toEqual([
+      { subcommand: "describe", revs: ["abc"] },
+      { subcommand: "commit", revs: ["@-"] },
+    ]);
   });
 });
