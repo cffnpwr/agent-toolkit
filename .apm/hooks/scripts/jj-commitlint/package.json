@@ -8,8 +8,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@commitlint/lint": "20.5.3",
-    "@commitlint/load": "20.5.3",
+    "@commitlint/lint": "21.2.0",
+    "@commitlint/load": "21.2.0",
     "unbash": "4.0.2"
   },
   "devDependencies": {
