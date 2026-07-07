@@ -94,6 +94,8 @@ AIエージェントは対話的TUI・エディタを操作できない。以下
 | 過去のchangeを編集 | `git rebase -i` | `jj edit CHANGE_ID` |
 | revのファイル内容を表示 | `git show REV:FILE` | `jj file show FILE -r REV` |
 | 追跡ファイル一覧 | `git ls-files` | `jj file list` |
+| 文字列を追加/削除したchangeを検索（pickaxe） | `git log -S "text" -- PATH` / `git log -G "regex"` | `jj log -r 'diff_lines(substring:"text", "PATH")'`（[検索](#履歴内容の検索diff_lines)参照） |
+| パスを変更したchangeを検索 | `git log -- PATH` | `jj log -r 'files("PATH")'` |
 | リモート追加 | `git remote add NAME URL` | `jj git remote add NAME URL` |
 
 ## 著者(author)の指定・変更
@@ -212,6 +214,24 @@ jj squash --from FIRST::@- --into @
 | `A::B` | AからB（両端含む） |
 | `A..B` | AとBの間（Aを除く） |
 | `all()` | 到達可能な全change |
+| `files(fileset)` | 指定パスを変更したchange |
+| `diff_lines(text, [files])` | 差分行が`text`にマッチするchange（git pickaxe相当） |
+
+## 履歴内容の検索（diff_lines）
+
+gitのpickaxe（`git log -S`/`-G`）に相当する検索は、revset関数`diff_lines(text, [files])`で行う（jj 0.38.0で`diff_contains`から改称。最低要件0.42で利用可）。差分行が`text`にマッチするchangeを絞り込む。
+
+```bash
+# "completion"を追加/削除したchangeを、homedir配下に限定して検索
+jj log -r 'diff_lines(substring:"completion", "homedir")'
+```
+
+注意点:
+
+- **パターン種別の既定は`glob:`**。`diff_lines("completion", …)`は`completion`と完全一致する行のみ。部分一致は`substring:"completion"`、正規表現は`regex:"…"`を明示する。
+- **`files`引数のパスは`jj`の起動ディレクトリ基準**で解決される。`-R`で別リポジトリを指す等でcwdとずれる場合は`root:"PATH"`（リポジトリルート基準）を使う。
+- **semanticsは`-G`寄り**。git `-S`固有の「出現回数の増減」判定に厳密対応する関数は無いが、「その文字列を追加/削除したchangeを探す」用途は`diff_lines`で足りる。
+- 追加側/削除側のみに絞るには`diff_lines_added()`/`diff_lines_removed()`（0.40.0以降）。
 
 ## gitにフォールバックする場面
 
