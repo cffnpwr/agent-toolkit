@@ -74,6 +74,10 @@ AIエージェントは対話的TUI・エディタを操作できない。以下
 | bookmark移動 | `git branch -f X` | `jj bookmark move X --to REV` |
 | bookmark一覧 | `git branch` | `jj bookmark list` |
 | bookmark削除 | `git branch -d X` | `jj bookmark delete X` |
+| tag一覧 | `git tag` / `git tag -l` | `jj tag list`（別名 `jj tag l`） |
+| tag作成 | `git tag NAME` | `jj tag set NAME`（既定で`@`を指す。`-r REV`で対象指定） |
+| tag移動 | `git tag -f NAME REV` | `jj tag set NAME -r REV --allow-move` |
+| tag削除（ローカル） | `git tag -d NAME` | `jj tag delete NAME` |
 | フェッチ | `git fetch` | `jj git fetch` |
 | プッシュ | `git push` | `jj git push` |
 | 新規bookmarkをプッシュ | `git push -u origin X` | `jj git push --bookmark X`（未追跡bookmarkは自動追跡される） |
@@ -143,6 +147,29 @@ jj metaedit --author-timestamp "2000-01-23T01:23:45-08:00" -r REV
 ```
 
 メタデータを更新すると、その子孫コミットのcommitter名・メール・日時も更新される。
+
+## タグ(tag)
+
+tagの一覧・作成・更新・削除は`jj tag`で完結する（`git tag`へのフォールバックは不要）。
+
+```bash
+# 一覧（インポート済みgit tagも表示される）
+jj tag list
+
+# 作成（既定で@を指す / -r で対象revisionを指定）
+jj tag set v1.0.0
+jj tag set v1.0.0 -r REV
+
+# 移動（既存tagの付け替えには --allow-move が必要）
+jj tag set v1.0.0 -r REV --allow-move
+
+# 削除（ローカル。tagが指すrevisionはabandonされない）
+jj tag delete v1.0.0
+```
+
+作成・更新したtagは、colocate環境では常にlightweight tagとしてGitへエクスポートされる。
+
+**リモートへのtag公開はgitフォールバックが必要**。`jj git push`はbookmarkのみを対象とし、tagをpushしない。tagをリモートへ送るには`git push origin TAG`（または`git push --tags`）を使う。
 
 ## コンフリクト解決
 
@@ -241,6 +268,7 @@ jjが未対応の操作のみ`git`を直接使う。
 - `git submodule`系コマンド
 - `git lfs`系コマンド
 - jjのツールでは不十分な、生のgitオブジェクトの読み取り
+- tagのリモートpush（`jj git push`はbookmarkのみ。`git push origin TAG`を使う）
 - git CLIを要求するサードパーティのgitフック・連携
 
 それ以外はすべて`jj`を使う。
