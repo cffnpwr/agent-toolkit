@@ -4,7 +4,7 @@
  * HarnessのPostToolUse入力をstdinで受け取る。
  * jj describe/commitが成功した直後の実際のコミット説明を読み出してcommitlintに掛ける。
  * 違反は移植性の高い終了コードのみで全Harnessに伝える。
- * 設定はcffnpwr/actionsのcommitlint設定を取得し、TTL付きでローカルにキャッシュする。
+ * 設定は同梱依存の@cffnpwr/commitlint-configを使う。
  *
  * 出力プロトコル(全Harness共通):
  * - 違反: exit 2 + stderr(Claude/Codex/GeminiはAgentにフィードバック、Copilot等は警告に劣化)
@@ -15,7 +15,6 @@
 import type { Json } from "./types.ts";
 
 import { parseTargets } from "./command.ts";
-import { loadCommitlintConfig } from "./config.ts";
 import { extractCommand, isObject } from "./input.ts";
 import { readDescription, runCommitlint } from "./lint.ts";
 
@@ -67,17 +66,6 @@ const run = async (): Promise<void> => {
   }
   if (messages.length === 0) return;
 
-  const config = await loadCommitlintConfig();
-  if (!config.ok) {
-    warn(
-      "jj-commitlint: could not load the commitlint config "
-      + `(network failed and no cache): ${config.reason}. `
-      + "The commit message may violate user-defined rules.",
-    );
-    return;
-  }
-  const configPath = config.path;
-
   const violations: string[] = [];
   for (const { rev, message } of messages) {
     // 空説明はcommitlintがstdin無しと見なしてヘルプを出すため、直接違反扱いにする。
@@ -85,7 +73,7 @@ const run = async (): Promise<void> => {
       violations.push(`Commit message on rev ${rev} is empty.`);
       continue;
     }
-    const result = await runCommitlint(message, configPath);
+    const result = await runCommitlint(message);
     if (result.unavailable) {
       warn(
         "jj-commitlint: could not run commitlint (bundled commitlint deps not synced?). "
