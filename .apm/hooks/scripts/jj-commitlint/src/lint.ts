@@ -20,14 +20,17 @@ export const readDescription = (rev: string, cwd: string): string | undefined =>
 /**
  * commitlintをメッセージに対して実行する。
  * 同梱した@commitlint/* のAPIを呼び、違反時はレポートをreportに入れる。
- * ライブラリの未同期・設定読込失敗などのインフラ要因はunavailableとして扱う。
+ * 設定は同梱依存の@cffnpwr/commitlint-configをextendsで解決する。
+ * cwdをこのファイルの位置に固定し、実行時cwd(ユーザープロジェクト)ではなく
+ * 同梱node_modulesからパッケージを解決する。
+ * ライブラリ・設定パッケージの未同期などのインフラ要因はunavailableとして扱う。
  */
-export const runCommitlint = async (
-  message: string,
-  configPath: string,
-): Promise<LintResult> => {
+export const runCommitlint = async (message: string): Promise<LintResult> => {
   try {
-    const config = await load({}, { file: configPath });
+    const config = await load(
+      { extends: ["@cffnpwr/commitlint-config"] },
+      { cwd: import.meta.dir },
+    );
     const result = await lint(message, config.rules, {
       plugins: config.plugins,
       ignores: config.ignores,

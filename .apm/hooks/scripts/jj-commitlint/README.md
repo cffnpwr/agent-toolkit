@@ -7,9 +7,8 @@ Harnessが`jj describe`/`jj commit`でコミット説明をセットした直後
 - 対象サブコマンドと対象revisionの解決は[検知対象](#検知対象)を参照。
 - 出力は移植性の高い終了コードに一本化する。
   違反はexit 2 + stderr、実行不可はexit 1 + stderr、通過・対象外はexit 0・無出力。
-- 設定は`cffnpwr/actions`のcommitlint設定(CIと同一ルール)を使う。
-  bunの`fetch`でraw取得しTTL付きでローカルにキャッシュする。
-  取得失敗時は期限切れキャッシュにフォールバックする。
+- 設定は同梱依存の`@cffnpwr/commitlint-config`パッケージを`extends`で解決する。
+  同梱node_modulesから解決するため、実行はオフラインで完結する。
 
 ## 入力の抽出と対応Harness
 
@@ -75,22 +74,8 @@ AI Agentへ渡す違反内容・警告は簡単な英語で出力する。
 | `src/main.ts` | エントリ・全体の制御・出力 |
 | `src/input.ts` | hook入力からコマンドを抽出 |
 | `src/command.ts` | コマンドのパースと対象revisionの解析 |
-| `src/lint.ts` | jj説明取得・commitlint実行 |
-| `src/config.ts` | 設定の取得とキャッシュ |
+| `src/lint.ts` | jj説明取得・commitlint実行(設定は`@cffnpwr/commitlint-config`をextendsで解決) |
 | `src/types.ts` | 共有型 |
-
-## 設定(環境変数)
-
-| 変数 | 既定 | 用途 |
-| --- | --- | --- |
-| `JJ_COMMITLINT_CONFIG_REPO` | `cffnpwr/actions` | 設定取得元リポジトリ(公開リポジトリ前提) |
-| `JJ_COMMITLINT_CONFIG_PATH` | `.github/commitlint/default.config.ts` | 設定ファイルパス |
-| `JJ_COMMITLINT_CONFIG_REF` | `main` | 取得ref |
-| `JJ_COMMITLINT_CACHE_DIR` | `${XDG_CACHE_HOME:-$HOME/.cache}/jj-commitlint` | キャッシュ先 |
-| `JJ_COMMITLINT_CACHE_TTL` | `3600` | キャッシュTTL(秒) |
-
-`XDG_CACHE_HOME`は標準の外部変数として参照のみ行う。
-設定取得は無認証のraw取得のため、取得元リポジトリは公開されている必要がある。
 
 ## Requirements
 
