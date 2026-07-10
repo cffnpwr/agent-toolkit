@@ -24,10 +24,11 @@ if ! command -v bun >/dev/null 2>&1; then
   exit 1
 fi
 
-# 同梱したcommitlint依存をロックファイルから同期する(再現的操作。git管理外のnode_modulesのみ変更)。
+# bun.lockからpackage.jsonを起こしてからcommitlint依存を同期する(再現的操作。git管理外のnode_modulesとpackage.jsonのみ変更)。
+# apmは配置時にpackage.jsonを除外するため、配置先ではbun.lockが唯一の新鮮な依存ソースになる。lockから生成すればfrozen同期が必ず整合する。
 # 毎回frozen同期し、ファイル存在に基づく偽陰性を避ける。bun installは同期済みなら安価に確認のみ行う。
-# 同期失敗時はfail-open(警告して通し、導入はユーザーに委ねる)。
-if ! ( cd "$dir" && bun install --frozen-lockfile --production --ignore-scripts ) >/dev/null 2>&1; then
+# 失敗時はfail-open(警告して通し、導入はユーザーに委ねる)。
+if ! ( cd "$dir" && bun "$dir/../shared/gen-package-json.ts" "$dir" && bun install --frozen-lockfile --production --ignore-scripts ) >/dev/null 2>&1; then
   echo "jj-commitlint: failed to sync the bundled commitlint deps from the lockfile. The commit message may violate user-defined rules." >&2
   exit 1
 fi
