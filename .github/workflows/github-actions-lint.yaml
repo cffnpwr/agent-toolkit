@@ -10,4 +10,4 @@ jobs:
   github-actions-lint:
     permissions:
       contents: read
-    uses: cffnpwr/actions/.github/workflows/github-actions-lint.yaml@ef7120284c6d7078936b92d94cc2ba36606c44f9 # main
+    uses: cffnpwr/actions/.github/workflows/github-actions-lint.yaml@35681e3c3ad4cba2118bcf5e21b48cb3e3cbf096 # main
