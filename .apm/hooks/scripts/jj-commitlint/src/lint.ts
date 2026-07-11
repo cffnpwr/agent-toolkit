@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
 
+import type { ParserOptions } from "conventional-commits-parser";
+
 import lint from "@commitlint/lint";
 import load from "@commitlint/load";
 
@@ -36,6 +38,7 @@ export const runCommitlint = async (message: string): Promise<LintResult> => {
       ignores: config.ignores,
       defaultIgnores: config.defaultIgnores,
       helpUrl: config.helpUrl,
+      parserOpts: config.parserPreset?.parserOpts as ParserOptions | undefined,
     });
     if (result.valid) return { ok: true, report: "", unavailable: false };
     const report = [
