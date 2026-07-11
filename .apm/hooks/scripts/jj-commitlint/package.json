@@ -17,6 +17,7 @@
     "@cffnpwr/eslint-config": "1.2.0",
     "@types/bun": "1.3.14",
     "@typescript-eslint/parser": "8.63.0",
+    "conventional-commits-parser": "7.0.1",
     "eslint": "10.6.0",
     "globals": "17.7.0",
     "jiti": "2.7.0",
