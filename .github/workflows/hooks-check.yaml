@@ -1,0 +1,79 @@
+name: Hooks check
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .apm/hooks/scripts/**
+      - .tool-versions
+      - .github/workflows/hooks-check.yaml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  discover:
+    name: Discover hook script projects
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      hooks: ${{ steps.discover.outputs.hooks }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Discover hook script projects
+        id: discover
+        run: |
+          hooks="$(
+            for dir in .apm/hooks/scripts/*/; do
+              if [ -f "${dir}package.json" ]; then
+                basename "$dir"
+              fi
+            done | jq -R -c -s 'split("\n") | map(select(length > 0))'
+          )"
+          echo "hooks=${hooks}" >> "$GITHUB_OUTPUT"
+
+  check:
+    name: Check ${{ matrix.hook }}
+    needs: discover
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        hook: ${{ fromJSON(needs.discover.outputs.hooks) }}
+    defaults:
+      run:
+        working-directory: .apm/hooks/scripts/${{ matrix.hook }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .tool-versions
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run lint
+        run: bun run lint
+
+      - name: Run typecheck
+        run: bun run typecheck
+
+      - name: Run test
+        run: bun run test
