@@ -13,6 +13,7 @@
       }
     },
     "@textlint-ja/preset-ai-writing": true,
+    "@cffnpwr/preset-ja-writing-extras": true,
     "preset-ja-spacing": {
       "ja-space-after-exclamation": false,
       "ja-space-after-question": false,
