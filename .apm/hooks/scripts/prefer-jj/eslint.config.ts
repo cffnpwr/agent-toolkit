@@ -9,7 +9,7 @@ export default defineConfig([
   {
     files,
     languageOptions: {
-      globals: { ...globals.node, Bun: "readonly" },
+      globals: globals.bunBuiltin,
       parser: tsEslintParser,
       parserOptions: {
         projectService: true,

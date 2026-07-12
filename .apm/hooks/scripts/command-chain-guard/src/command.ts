@@ -50,13 +50,13 @@ const isCdHead = (cmd: Command): boolean => {
 // command -v例外の先頭セグメント: `command -v <name>`(過不足ない2語のsuffix)。
 const isCommandVHead = (cmd: Command): boolean => wordValue(cmd.name) === "command"
   && cmd.suffix.length === 2
-  && cmd.suffix[0].value === "-v";
+  && cmd.suffix[0]?.value === "-v";
 
 // cd例外: 全演算子が&&・セグメント2個・先頭がcd単体呼び出し。
 const isCdException = (node: AndOr): boolean => {
   if (node.commands.length !== 2 || !node.operators.every((op) => op === "&&")) return false;
   const head = node.commands[0];
-  return head.type === "Command" && isCdHead(head);
+  return head?.type === "Command" && isCdHead(head);
 };
 
 // command -v例外: 全演算子が||・セグメント2個・先頭がcommand -v単体呼び出し。
@@ -64,7 +64,7 @@ const isCdException = (node: AndOr): boolean => {
 const isCommandVException = (node: AndOr): boolean => {
   if (node.commands.length !== 2 || !node.operators.every((op) => op === "||")) return false;
   const head = node.commands[0];
-  return head.type === "Command" && isCommandVHead(head);
+  return head?.type === "Command" && isCommandVHead(head);
 };
 
 /**
@@ -81,9 +81,9 @@ const walk = (target: Target, ctx: Context): void => {
     const hasNonBackgroundJunction = target
       .slice(0, -1)
       .some((stmt) => !stmt.background);
-    if (target.length > 1 && hasNonBackgroundJunction) {
-      const first = target[0];
-      const last = target[target.length - 1];
+    const first = target[0];
+    const last = target[target.length - 1];
+    if (target.length > 1 && hasNonBackgroundJunction && first !== undefined && last !== undefined) {
       ctx.violations.push({
         label: "; or newline",
         snippet: ctx.source.slice(first.pos, last.end),
@@ -98,6 +98,7 @@ const walk = (target: Target, ctx: Context): void => {
     const parts: (DoubleQuotedChild | WordPart)[] = target.parts ? [...target.parts] : [];
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
+      if (part === undefined) continue;
       switch (part.type) {
         case "CommandExpansion":
         case "ProcessSubstitution":

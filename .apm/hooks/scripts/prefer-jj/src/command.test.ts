@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import type { GitCall } from "./types.ts";
+
 import { classify } from "./classify.ts";
 import { parseGitCalls } from "./command.ts";
 
@@ -152,15 +154,15 @@ describe("parseGitCalls", () => {
 
 describe("classify", () => {
   test("[positive] git statusのとき、jj stへ誘導する", () => {
-    const calls = parseGitCalls("git status");
-    expect(calls).toHaveLength(1);
-    expect(classify(calls[0])).toContain("jj st");
+    const [call] = parseGitCalls("git status");
+    expect(call).toBeDefined();
+    expect(classify(call as GitCall)).toContain("jj st");
   });
 
   test("[positive] git clone URLのとき、jj git cloneへ誘導する", () => {
-    const calls = parseGitCalls("git clone https://example.com/repo.git");
-    expect(calls).toHaveLength(1);
-    expect(classify(calls[0])).toContain("jj git clone");
+    const [call] = parseGitCalls("git clone https://example.com/repo.git");
+    expect(call).toBeDefined();
+    expect(classify(call as GitCall)).toContain("jj git clone");
   });
 
   test("[negative] git clone --depth 1のとき、shallow例外で通過する", () => {

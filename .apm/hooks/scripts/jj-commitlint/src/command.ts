@@ -52,6 +52,7 @@ const collectFromNode = (node: Node, segments: string[][]): void => {
     for (const word of words) pushParts(word);
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
+      if (part === undefined) continue;
       switch (part.type) {
         case "CommandExpansion":
         case "ProcessSubstitution":
@@ -140,11 +141,14 @@ export const parseTargets = (command: string): Target[] => {
   const targets: Target[] = [];
   for (const seg of segments) {
     // コマンド名がjjバイナリ(jj または .../jj)の呼び出しだけを対象にする。
-    if (seg[0] !== "jj" && !seg[0].endsWith("/jj")) continue;
+    const head = seg[0];
+    if (head === undefined) continue;
+    if (head !== "jj" && !head.endsWith("/jj")) continue;
     // jjの後ろで最初に現れる非グローバルフラグをサブコマンドとみなす。
     let subIdx = -1;
     for (let k = 1; k < seg.length; k++) {
       const t = seg[k];
+      if (t === undefined) continue;
       if (t.startsWith("-")) {
         if (VALUE_FLAGS.has(t)) k++;
         continue;
@@ -161,8 +165,13 @@ export const parseTargets = (command: string): Target[] => {
       const revs: string[] = [];
       for (let k = subIdx + 1; k < seg.length; k++) {
         const t = seg[k];
+        if (t === undefined) continue;
         if (t === "-r" || t === "--revision") {
-          if (k + 1 < seg.length) revs.push(seg[++k]);
+          const next = seg[k + 1];
+          if (next !== undefined) {
+            revs.push(next);
+            k++;
+          }
         } else if (t.startsWith("--revision=")) {
           revs.push(t.slice("--revision=".length));
         } else if (t.startsWith("-r") && !t.startsWith("--")) {

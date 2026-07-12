@@ -53,6 +53,7 @@ const collectCommands = (node: Node, out: Command[]): void => {
     for (const word of words) pushParts(word);
     for (let i = 0; i < parts.length; i++) {
       const part = parts[i];
+      if (part === undefined) continue;
       switch (part.type) {
         case "CommandExpansion":
         case "ProcessSubstitution":
@@ -156,6 +157,7 @@ export const parseGitCalls = (command: string): GitCall[] => {
     let subIdx = -1;
     for (let k = 0; k < words.length; k++) {
       const t = words[k];
+      if (t === undefined) continue;
       if (t.startsWith("-")) {
         if (GIT_VALUE_FLAGS.has(t)) k++;
         continue;
@@ -164,7 +166,9 @@ export const parseGitCalls = (command: string): GitCall[] => {
       break;
     }
     if (subIdx < 0) continue;
-    calls.push({ subcommand: words[subIdx], args: words.slice(subIdx + 1) });
+    const subcommand = words[subIdx];
+    if (subcommand === undefined) continue;
+    calls.push({ subcommand, args: words.slice(subIdx + 1) });
   }
   return calls;
 };
