@@ -1,14 +1,4 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "types": ["bun"],
-    "strict": true,
-    "noEmit": true,
-    "skipLibCheck": true,
-    "verbatimModuleSyntax": true,
-    "allowImportingTsExtensions": true
-  },
+  "extends": "@cffnpwr/tsconfig/bun",
   "include": ["**/*.ts"]
 }
