@@ -19,20 +19,29 @@ export const readDescription = (rev: string, cwd: string): string | undefined =>
   return res.stdout.replace(/\n$/, "");
 };
 
+type QualifiedConfig = Awaited<ReturnType<typeof load>>;
+
+/**
+ * commitlint設定を解決する。
+ * まずlint対象リポジトリ(cwd)の設定を自動探索し、ルールが定義されていればそれを優先する。
+ * 無ければ同梱依存の@cffnpwr/commitlint-configをデフォルトとしてextendsで解決する。
+ * デフォルト解決時はcwdをこのファイルの位置に固定し、同梱node_modulesから解決する。
+ */
+const loadConfig = async (cwd: string): Promise<QualifiedConfig> => {
+  const repo = await load({}, { cwd });
+  if (Object.keys(repo.rules).length > 0) return repo;
+  return load({ extends: ["@cffnpwr/commitlint-config"] }, { cwd: import.meta.dir });
+};
+
 /**
  * commitlintをメッセージに対して実行する。
  * 同梱した@commitlint/* のAPIを呼び、違反時はレポートをreportに入れる。
- * 設定は同梱依存の@cffnpwr/commitlint-configをextendsで解決する。
- * cwdをこのファイルの位置に固定し、実行時cwd(ユーザープロジェクト)ではなく
- * 同梱node_modulesからパッケージを解決する。
+ * 設定はリポジトリ設定を優先し、無ければ同梱の@cffnpwr/commitlint-configを使う(loadConfig参照)。
  * ライブラリ・設定パッケージの未同期などのインフラ要因はunavailableとして扱う。
  */
-export const runCommitlint = async (message: string): Promise<LintResult> => {
+export const runCommitlint = async (message: string, cwd: string): Promise<LintResult> => {
   try {
-    const config = await load(
-      { extends: ["@cffnpwr/commitlint-config"] },
-      { cwd: import.meta.dir },
-    );
+    const config = await loadConfig(cwd);
     const result = await lint(message, config.rules, {
       plugins: config.plugins,
       ignores: config.ignores,

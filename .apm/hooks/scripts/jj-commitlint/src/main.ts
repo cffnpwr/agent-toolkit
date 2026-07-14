@@ -4,7 +4,7 @@
  * HarnessのPostToolUse入力をstdinで受け取る。
  * jj describe/commitが成功した直後の実際のコミット説明を読み出してcommitlintに掛ける。
  * 違反は移植性の高い終了コードのみで全Harnessに伝える。
- * 設定は同梱依存の@cffnpwr/commitlint-configを使う。
+ * 設定はlint対象リポジトリの設定を優先し、無ければ同梱の@cffnpwr/commitlint-configを使う。
  *
  * 出力プロトコル(全Harness共通):
  * - 違反: exit 2 + stderr(Claude/Codex/GeminiはAgentにフィードバック、Copilot等は警告に劣化)
@@ -73,7 +73,7 @@ const run = async (): Promise<void> => {
       violations.push(`Commit message on rev ${rev} is empty.`);
       continue;
     }
-    const result = await runCommitlint(message);
+    const result = await runCommitlint(message, cwd);
     if (result.unavailable) {
       warn(
         "jj-commitlint: could not run commitlint (bundled commitlint deps not synced?). "
