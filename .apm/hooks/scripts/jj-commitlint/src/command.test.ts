@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
+import type { Target } from "./types.ts";
+
 import { parseTargets } from "./command.ts";
 
 const BASE = "/base";
@@ -57,13 +59,11 @@ describe("parseTargets", () => {
     ]);
   });
 
-  test("[positive] desc/ciエイリアスのとき、describe/commitとして解釈する", () => {
-    expect(parseTargets("jj desc -m x", BASE)).toEqual([
-      { subcommand: "describe", revs: ["@"], cwd: BASE },
-    ]);
-    expect(parseTargets("jj ci -m x", BASE)).toEqual([
-      { subcommand: "commit", revs: ["@-"], cwd: BASE },
-    ]);
+  test.each<[string, Target]>([
+    ["jj desc -m x", { subcommand: "describe", revs: ["@"], cwd: BASE }],
+    ["jj ci -m x", { subcommand: "commit", revs: ["@-"], cwd: BASE }],
+  ])("[positive] %s のとき describe/commitエイリアスとして解釈する", (command, expected) => {
+    expect(parseTargets(command, BASE)).toEqual([expected]);
   });
 
   test("[positive] 絶対パスのjjのとき、jjとして認識する", () => {
@@ -84,9 +84,11 @@ describe("parseTargets", () => {
     ]);
   });
 
-  test("[negative] 非対象コマンドのとき、空になる", () => {
-    expect(parseTargets("ls -la", BASE)).toEqual([]);
-    expect(parseTargets("jj log", BASE)).toEqual([]);
+  test.each([
+    "ls -la",
+    "jj log",
+  ])("[negative] 非対象コマンド(%s)のとき、空になる", (command) => {
+    expect(parseTargets(command, BASE)).toEqual([]);
   });
 
   test("[positive] -rが複数あるとき、全revを保持する", () => {

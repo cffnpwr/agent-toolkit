@@ -21,9 +21,11 @@ describe("parseGitCalls", () => {
     expect(parseGitCalls("jj git push", BASE)).toEqual([]);
   });
 
-  test("[negative] コマンド名以外の位置にgitがあるとき、抽出しない", () => {
-    expect(parseGitCalls("echo git commit", BASE)).toEqual([]);
-    expect(parseGitCalls("grep \"git commit\" file", BASE)).toEqual([]);
+  test.each([
+    "echo git commit",
+    "grep \"git commit\" file",
+  ])("[negative] コマンド名以外の位置にgitがある(%s)とき、抽出しない", (command) => {
+    expect(parseGitCalls(command, BASE)).toEqual([]);
   });
 
   test("[positive] &&で連結されたとき、第2セグメントのgitを抽出する", () => {
@@ -54,14 +56,12 @@ describe("parseGitCalls", () => {
     expect(parseGitCalls("PREFER_JJ_DISABLE=1 git push", BASE)).toEqual([]);
   });
 
-  test("[positive] PREFER_JJ_DISABLEの前置が偽値のとき、バイパスしない", () => {
-    expect(parseGitCalls("PREFER_JJ_DISABLE=0 git push", BASE)).toEqual([
-      { subcommand: "push", args: [], cwd: BASE },
-    ]);
-    expect(parseGitCalls("PREFER_JJ_DISABLE=false git push", BASE)).toEqual([
-      { subcommand: "push", args: [], cwd: BASE },
-    ]);
-    expect(parseGitCalls("PREFER_JJ_DISABLE= git push", BASE)).toEqual([
+  test.each([
+    "PREFER_JJ_DISABLE=0 git push",
+    "PREFER_JJ_DISABLE=false git push",
+    "PREFER_JJ_DISABLE= git push",
+  ])("[positive] PREFER_JJ_DISABLEの前置が偽値(%s)のとき、バイパスしない", (command) => {
+    expect(parseGitCalls(command, BASE)).toEqual([
       { subcommand: "push", args: [], cwd: BASE },
     ]);
   });
@@ -254,13 +254,13 @@ describe("classify", () => {
   test("[positive] git statusのとき、jj stへ誘導する", () => {
     const [call] = parseGitCalls("git status", BASE);
     expect(call).toBeDefined();
-    expect(classify(call as GitCall)).toContain("jj st");
+    expect(classify(call as GitCall)).toBe("use `jj st`");
   });
 
   test("[positive] git clone URLのとき、jj git cloneへ誘導する", () => {
     const [call] = parseGitCalls("git clone https://example.com/repo.git", BASE);
     expect(call).toBeDefined();
-    expect(classify(call as GitCall)).toContain("jj git clone");
+    expect(classify(call as GitCall)).toBe("use `jj git clone`");
   });
 
   test("[negative] git clone --depth 1のとき、shallow例外で通過する", () => {
