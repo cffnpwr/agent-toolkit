@@ -10,7 +10,7 @@
     "@textlint-ja/textlint-rule-no-insert-re": "1.0.2",
     "@textlint-ja/textlint-rule-no-dropping-i": "3.0.0",
     "@textlint-ja/textlint-rule-no-insert-dropping-sa": "2.0.1",
-    "sudachi-synonyms-dictionary": "17.0.0",
+    "sudachi-synonyms-dictionary": "18.0.0",
     "textlint": "15.7.1",
     "textlint-rule-ja-no-orthographic-variants": "2.0.0",
     "textlint-rule-period-in-list-item": "1.0.1",
