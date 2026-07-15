@@ -12,7 +12,7 @@
     "@cffnpwr/tsconfig": "1.0.0",
     "@types/bun": "1.3.14",
     "@typescript-eslint/parser": "8.63.0",
-    "eslint": "10.6.0",
+    "eslint": "10.7.0",
     "globals": "17.7.0",
     "jiti": "2.7.0",
     "typescript": "6.0.3",
