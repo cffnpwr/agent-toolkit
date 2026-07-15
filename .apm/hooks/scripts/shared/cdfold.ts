@@ -5,6 +5,8 @@
 // unbashのランタイム依存(parse)は各hook側に残し、ここは型のみ(import type、実行時に消える)を使う。
 // これによりnode_modulesを持たないsharedでも解決できる(tscの型解決は各hook tsconfigのpathsで補う)。
 
+import { resolve } from "node:path";
+
 import type {
   AssignmentPrefix,
   Command,
@@ -15,8 +17,6 @@ import type {
   Word,
   WordPart,
 } from "unbash";
-
-import { resolve } from "node:path";
 
 // 有効CWD。null=静的に解決不能(不明)。
 export type Cwd = string | null;
@@ -36,9 +36,6 @@ export type Collect = (cmd: Command, cwd: Cwd) => void;
 
 // シェルの変数名(識別子)。特殊パラメータ($1・$?等)は解決対象外。
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
-
-// cdのオプションフラグ(値を取らない)。
-const CD_FLAGS = new Set(["-L", "-P", "-e", "-@"]);
 
 // 未設定/空時に既定値を採るパラメータ展開の演算子。
 const DEFAULT_OPS = new Set([":-", "-", ":=", "="]);
