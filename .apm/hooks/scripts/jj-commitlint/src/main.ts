@@ -15,7 +15,7 @@
 
 import type { Json } from "./types.ts";
 
-import { resolveBaseCwd } from "../../shared/cdfold.ts";
+import { resolveBaseCwd } from "../../shared/src/cdfold.ts";
 
 import { parseTargets } from "./command.ts";
 import { extractCommand, isObject } from "./input.ts";

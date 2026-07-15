@@ -1,7 +1,7 @@
 // bun.lockのworkspaceルート定義からpackage.jsonを生成する。
 // apmはフック配置時にpackage.jsonを深さを問わず除外するため、配置先ではpackage.jsonが残らない。
 // 配置先で新鮮に残る唯一の依存ソースはbun.lockなので、bun installの前にここからmanifestを起こし、lockと必ず整合させる。
-// 各フックの起動スクリプトから ../shared/gen-package-json.ts として共有し、対象フックのディレクトリを第1引数で受け取る。
+// 各フックの起動スクリプトから ../shared/src/gen-package-json.ts として共有し、対象フックのディレクトリを第1引数で受け取る。
 
 interface WorkspaceRoot {
   name?: string;

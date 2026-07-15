@@ -2,11 +2,11 @@ import type { Command } from "unbash";
 
 import { parse } from "unbash";
 
-import type { Cwd } from "../../shared/cdfold.ts";
+import type { Cwd } from "../../shared/src/cdfold.ts";
 
 import type { GitCall } from "./types.ts";
 
-import { foldCwd } from "../../shared/cdfold.ts";
+import { foldCwd } from "../../shared/src/cdfold.ts";
 
 // コマンド単位の一時バイパスに使うenv代入名。
 const BYPASS_VAR = "PREFER_JJ_DISABLE";

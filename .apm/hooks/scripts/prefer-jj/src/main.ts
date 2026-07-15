@@ -16,7 +16,7 @@ import { spawnSync } from "node:child_process";
 
 import type { Json } from "./types.ts";
 
-import { resolveBaseCwd } from "../../shared/cdfold.ts";
+import { resolveBaseCwd } from "../../shared/src/cdfold.ts";
 
 import { classify } from "./classify.ts";
 import { parseGitCalls } from "./command.ts";

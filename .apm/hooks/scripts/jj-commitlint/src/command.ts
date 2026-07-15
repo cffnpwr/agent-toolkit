@@ -1,10 +1,10 @@
 import { parse } from "unbash";
 
-import type { Cwd } from "../../shared/cdfold.ts";
+import type { Cwd } from "../../shared/src/cdfold.ts";
 
 import type { Target } from "./types.ts";
 
-import { foldCwd } from "../../shared/cdfold.ts";
+import { foldCwd } from "../../shared/src/cdfold.ts";
 
 // 値を取る(次の語を消費する)フラグ。
 // 値をrevisionと誤認しないために列挙する。
