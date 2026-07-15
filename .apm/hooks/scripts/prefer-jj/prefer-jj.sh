@@ -22,9 +22,14 @@ case "$input" in
   *) exit 0 ;;
 esac
 
-# jjリポジトリ判定。非jjリポジトリ・jj不在ではjjへ促す意味が無いため通過する。
+# jjリポジトリ判定。base cwdがjjリポジトリなら従来どおり本体で判定する。
+# 非jj・jj不在でも、cdを含むコマンドはcd先がjjリポジトリの可能性があるため本体へ委ねる
+# (有効CWDごとの判定は本体main.tsが行う)。jjでもcdでもなければbun起動前に通過する。
 if ! jj root --ignore-working-copy >/dev/null 2>&1; then
-  exit 0
+  case "$input" in
+    *cd*) ;;
+    *) exit 0 ;;
+  esac
 fi
 
 # 自身のディレクトリを基準にmain.tsを解決する(引数順・cwd非依存)。
@@ -40,7 +45,7 @@ fi
 # apmは配置時にpackage.jsonを除外するため、配置先ではbun.lockが唯一の新鮮な依存ソースになる。lockから生成すればfrozen同期が必ず整合する。
 # 毎回frozen同期し、ファイル存在に基づく偽陰性を避ける。bun installは同期済みなら安価に確認のみ行う。
 # 失敗時はfail-open(警告して通し、導入はユーザーに委ねる)。
-if ! ( cd "$dir" && bun "$dir/../shared/gen-package-json.ts" "$dir" && bun install --frozen-lockfile --production --ignore-scripts ) >/dev/null 2>&1; then
+if ! ( cd "$dir" && bun "$dir/../shared/src/gen-package-json.ts" "$dir" && bun install --frozen-lockfile --production --ignore-scripts ) >/dev/null 2>&1; then
   echo "prefer-jj: failed to sync the bundled deps from the lockfile; cannot check for git commands that have a jj equivalent." >&2
   exit 1
 fi

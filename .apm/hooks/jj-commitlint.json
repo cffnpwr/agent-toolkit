@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./scripts/jj-commitlint/commitlint.sh ./scripts/jj-commitlint/src/main.ts ./scripts/jj-commitlint/src/command.ts ./scripts/jj-commitlint/src/input.ts ./scripts/jj-commitlint/src/lint.ts ./scripts/jj-commitlint/src/types.ts ./scripts/jj-commitlint/package.json ./scripts/jj-commitlint/bun.lock",
+            "command": "./scripts/jj-commitlint/commitlint.sh",
             "timeout": 60
           }
         ]

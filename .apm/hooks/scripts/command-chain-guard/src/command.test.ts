@@ -20,9 +20,11 @@ describe("findChainViolations", () => {
       expect(findChainViolations("a\nb")).toHaveLength(1);
     });
 
-    test("[positive] 3個以上の連結も違反とする", () => {
-      expect(findChainViolations("a && b && c")).toHaveLength(1);
-      expect(findChainViolations("a; b; c")).toHaveLength(1);
+    test.each([
+      "a && b && c",
+      "a; b; c",
+    ])("[positive] 3個以上の連結(%s)も違反とする", (command) => {
+      expect(findChainViolations(command)).toHaveLength(1);
     });
 
     test("[positive] [[ ]]同士を&&で連結したとき違反とする(テスト式内部のTestLogicalとは別物)", () => {
@@ -43,9 +45,11 @@ describe("findChainViolations", () => {
       expect(findChainViolations("sleep 1 &")).toEqual([]);
     });
 
-    test("[negative] &のみで繋がれた複数コマンドは、banされた3演算子に含まれないため通過する", () => {
-      expect(findChainViolations("a & b")).toEqual([]);
-      expect(findChainViolations("a & b & c")).toEqual([]);
+    test.each([
+      "a & b",
+      "a & b & c",
+    ])("[negative] &のみで繋がれた%sは、banされた3演算子に含まれないため通過する", (command) => {
+      expect(findChainViolations(command)).toEqual([]);
     });
 
     test("[positive] &で繋がれた並びに;・改行が1箇所でもあれば、そこは違反として検知する", () => {
@@ -62,9 +66,11 @@ describe("findChainViolations", () => {
       expect(findChainViolations("cd /tmp && npm run build")).toEqual([]);
     });
 
-    test("[negative] cd -L/-Pフラグ付きも通過する", () => {
-      expect(findChainViolations("cd -L /tmp && cmd")).toEqual([]);
-      expect(findChainViolations("cd -P /tmp && cmd")).toEqual([]);
+    test.each([
+      "cd -L /tmp && cmd",
+      "cd -P /tmp && cmd",
+    ])("[negative] %s(cd -L/-Pフラグ付き)も通過する", (command) => {
+      expect(findChainViolations(command)).toEqual([]);
     });
 
     test("[positive] cdの後にさらに&&が続くとき、例外にしない", () => {
@@ -129,20 +135,26 @@ describe("findChainViolations", () => {
       expect(findChainViolations("for f in *; do a && b; done")).toHaveLength(1);
     });
 
-    test("[positive] if節・then節・else節の内部の連結を検知する", () => {
-      expect(findChainViolations("if a && b; then c; fi")).toHaveLength(1);
-      expect(findChainViolations("if a; then b && c; fi")).toHaveLength(1);
-      expect(findChainViolations("if a; then b; else c && d; fi")).toHaveLength(1);
+    test.each([
+      { placement: "if節", src: "if a && b; then c; fi" },
+      { placement: "then節", src: "if a; then b && c; fi" },
+      { placement: "else節", src: "if a; then b; else c && d; fi" },
+    ])("[positive] $placementの内部の連結を検知する", ({ src }: { placement: string; src: string; }) => {
+      expect(findChainViolations(src)).toHaveLength(1);
     });
 
-    test("[positive] while節・本体の内部の連結を検知する", () => {
-      expect(findChainViolations("while a && b; do c; done")).toHaveLength(1);
-      expect(findChainViolations("while a; do b && c; done")).toHaveLength(1);
+    test.each([
+      { placement: "while節", src: "while a && b; do c; done" },
+      { placement: "本体", src: "while a; do b && c; done" },
+    ])("[positive] while $placementの内部の連結を検知する", ({ src }: { placement: string; src: string; }) => {
+      expect(findChainViolations(src)).toHaveLength(1);
     });
 
-    test("[positive] サブシェル・ブレースグループの内部の連結を検知する", () => {
-      expect(findChainViolations("(a && b)")).toHaveLength(1);
-      expect(findChainViolations("{ a && b; }")).toHaveLength(1);
+    test.each([
+      { kind: "サブシェル", src: "(a && b)" },
+      { kind: "ブレースグループ", src: "{ a && b; }" },
+    ])("[positive] $kindの内部の連結を検知する", ({ src }: { kind: string; src: string; }) => {
+      expect(findChainViolations(src)).toHaveLength(1);
     });
 
     test("[positive] 関数定義の内部の連結を検知する", () => {
@@ -189,10 +201,12 @@ describe("findChainViolations", () => {
       expect(findChainViolations("a && COMMAND_CHAIN_GUARD_DISABLE=1 b")).toEqual([]);
     });
 
-    test("[positive] バイパス前置が偽値のとき、バイパスしない", () => {
-      expect(findChainViolations("COMMAND_CHAIN_GUARD_DISABLE=0 a && b")).toHaveLength(1);
-      expect(findChainViolations("COMMAND_CHAIN_GUARD_DISABLE=false a && b")).toHaveLength(1);
-      expect(findChainViolations("COMMAND_CHAIN_GUARD_DISABLE= a && b")).toHaveLength(1);
+    test.each([
+      "COMMAND_CHAIN_GUARD_DISABLE=0 a && b",
+      "COMMAND_CHAIN_GUARD_DISABLE=false a && b",
+      "COMMAND_CHAIN_GUARD_DISABLE= a && b",
+    ])("[positive] バイパス前置が偽値(%s)のとき、バイパスしない", (command) => {
+      expect(findChainViolations(command)).toHaveLength(1);
     });
   });
 });

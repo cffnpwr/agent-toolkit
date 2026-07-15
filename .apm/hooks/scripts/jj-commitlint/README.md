@@ -7,8 +7,9 @@ Harnessが`jj describe`/`jj commit`でコミット説明をセットした直後
 - 対象サブコマンドと対象revisionの解決は[検知対象](#検知対象)を参照。
 - 出力は移植性の高い終了コードに一本化する。
   違反はexit 2 + stderr、実行不可はexit 1 + stderr、通過・対象外はexit 0・無出力。
-- 設定は同梱依存の`@cffnpwr/commitlint-config`パッケージを`extends`で解決する。
-  同梱node_modulesから解決するため、実行はオフラインで完結する。
+- 設定はまずlint対象リポジトリのcommitlint設定を自動探索し、ルールが定義されていればそれを優先する。
+  無ければ同梱依存の`@cffnpwr/commitlint-config`パッケージをデフォルトとして`extends`で解決する。
+  デフォルトは同梱node_modulesから解決するため、実行はオフラインで完結する。
 
 ## 入力の抽出と対応Harness
 
@@ -74,7 +75,7 @@ AI Agentへ渡す違反内容・警告は簡単な英語で出力する。
 | `src/main.ts` | エントリ・全体の制御・出力 |
 | `src/input.ts` | hook入力からコマンドを抽出 |
 | `src/command.ts` | コマンドのパースと対象revisionの解析 |
-| `src/lint.ts` | jj説明取得・commitlint実行(設定は`@cffnpwr/commitlint-config`をextendsで解決) |
+| `src/lint.ts` | jj説明取得・commitlint実行(リポジトリ設定を優先し、無ければ`@cffnpwr/commitlint-config`をデフォルト) |
 | `src/types.ts` | 共有型 |
 
 ## Requirements
