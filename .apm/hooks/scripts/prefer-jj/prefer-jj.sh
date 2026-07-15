@@ -22,9 +22,14 @@ case "$input" in
   *) exit 0 ;;
 esac
 
-# jjリポジトリ判定。非jjリポジトリ・jj不在ではjjへ促す意味が無いため通過する。
+# jjリポジトリ判定。base cwdがjjリポジトリなら従来どおり本体で判定する。
+# 非jj・jj不在でも、cdを含むコマンドはcd先がjjリポジトリの可能性があるため本体へ委ねる
+# (有効CWDごとの判定は本体main.tsが行う)。jjでもcdでもなければbun起動前に通過する。
 if ! jj root --ignore-working-copy >/dev/null 2>&1; then
-  exit 0
+  case "$input" in
+    *cd*) ;;
+    *) exit 0 ;;
+  esac
 fi
 
 # 自身のディレクトリを基準にmain.tsを解決する(引数順・cwd非依存)。
