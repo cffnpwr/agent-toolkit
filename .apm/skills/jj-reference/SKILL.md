@@ -42,6 +42,10 @@ AIエージェントは対話的TUI・エディタを操作できない。以下
 - メッセージは常に`-m`で渡す。
 - 履歴の参照・指定には安定なchange IDを使う。commit IDは改変で変わるため避ける。
 
+### 存在しないオプション（誤用しない）
+
+- **`jj git push`に`--allow-new`は無い**。指定すると`error: unexpected argument '--allow-new'`で失敗する（jjは類似の`--all`を提案するが別物）。新規（未追跡）bookmarkをpushするには`--bookmark NAME`・`--named NAME=REV`・`--change REV`・`--all`のいずれかを使う。`--bookmark`指定時、未追跡bookmarkは自動で追跡される。
+
 | やりたいこと | 対話形（不可） | 非対話形（使う） |
 |---|---|---|
 | 変更を分割 | `jj split` | `jj split FILESET... -m "msg"`（ファイル指定＋メッセージ） |
