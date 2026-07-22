@@ -1,0 +1,9 @@
+name: orchestrator
+version: 1.0.0
+description: タスクリストにもとづく子Agent委譲実行スキル
+author: cffnpwr
+license: MIT
+dependencies:
+  apm:
+    - path: ../task-decomposition
+    - path: ../model-selection
