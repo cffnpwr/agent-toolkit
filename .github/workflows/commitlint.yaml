@@ -11,4 +11,4 @@ jobs:
     permissions:
       contents: read
       actions: read
-    uses: cffnpwr/actions/.github/workflows/commitlint.yaml@8e449128ae4f5b5bae3786ea93749991ebe33ae8 # main
+    uses: cffnpwr/actions/.github/workflows/commitlint.yaml@01ece3ef2ae526cb63fb95b65495ef17314adf43 # main
