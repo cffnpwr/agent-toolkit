@@ -1,10 +1,13 @@
 # jj-commitlint
 
-Harnessが`jj describe`/`jj commit`でコミット説明をセットした直後(PostToolUse)に、適用後のrevisionの実説明を読んでcommitlintに掛け、違反していれば是正させるhook。
+Harnessが`jj describe`/`jj commit`でコミット説明をセットする直前(PreToolUse)に、コマンドの`-m`/`--message`値をcommitlintに掛けるhook。
+違反していればコマンドを実行前にブロックする。
 
-- 介入点はPostToolUse。
-  コマンド文字列から`-m`値を抽出せず、`jj log --no-graph --ignore-working-copy -r <revision> -T description`で適用後の実説明を読む(`--stdin`・変数展開・複数`-m`等に対する頑健性のため)。
-- 対象サブコマンドと対象revisionの解決は[検知対象](#検知対象)を参照。
+- 介入点はPreToolUse。
+  コマンド文字列から`-m`/`--message`値を静的に抽出してlintする。
+  実行前に判定するため、コマンドの完了を待たずにhookが走る実行形態(バックグラウンド実行)や、後続コマンドによる作業コピーの移動の影響を受けない。
+- メッセージを静的に特定できない呼び出しはlint対象外(fail-open)。
+  [検知対象](#検知対象)を参照。
 - 出力は移植性の高い終了コードに一本化する。
   違反はexit 2 + stderr、実行不可はexit 1 + stderr、通過・対象外はexit 0・無出力。
 - 設定はまずlint対象リポジトリのcommitlint設定を自動探索し、ルールが定義されていればそれを優先する。
@@ -14,30 +17,52 @@ Harnessが`jj describe`/`jj commit`でコミット説明をセットした直後
 ## 入力の抽出と対応Harness
 
 コマンドはhook入力の`tool_input.command`から取り出す。
-このフィールドはClaude(hooks docs, Bashツール)、Codex(`post_tool_use.rs`)、Gemini(`ShellToolParams.command`)で確認済み。
+このフィールドは次の一次ソースで確認済み。
+
+- Claude: hooks docs(BashツールのPreToolUse入力)
+- Codex: `codex-rs/hooks/src/events/pre_tool_use.rs`
+- Gemini: `packages/core/src/hooks/types.ts`の`BeforeToolInput`(値は`tools/shell.ts`の`ShellToolParams.command`)
+
 CopilotはcamelCaseの`toolArgs`を使い、コマンドのサブフィールド名が未文書化のため対象外とする。
 
 ## 検知対象
 
 ### サブコマンド
 
-検知するもの:
+検知するサブコマンドは次のとおり。
 
-| サブコマンド | 既定エイリアス | 対象revisionの解決 |
-| --- | --- | --- |
-| `describe` | `desc` | `-r`/`--revision`(密着形`-rVALUE`・`-r=VALUE`を含む)・位置引数のrevset。無指定は`@` |
-| `commit` | `ci` | `@-`(commitは`@`に作用し、説明は新しい親に乗る) |
+| サブコマンド | 既定エイリアス |
+| --- | --- |
+| `describe` | `desc` |
+| `commit` | `ci` |
 
-検知しないもの:
+次のものは検知しない。
 
 | サブコマンド | 状態 | 備考 |
 | --- | --- | --- |
 | `new -m` / `squash -m` / `split -m` | 未対応 | 説明を設定・変更しうるが対象外 |
 | ユーザー定義alias | 検知不能 | `jj config`に依存し、コマンド文字列の静的解析では解決できない |
 
+### メッセージの解決
+
+lint対象のメッセージはコマンドの`-m`/`--message`値から決める。
+対象revision(`-r`・位置引数のrevset)はメッセージ内容に影響しないため解決しない。
+
+| 記法 | 例 | 扱い |
+| --- | --- | --- |
+| 分離形 | `-m "feat: x"`・`--message "feat: x"` | 値をlint |
+| 結合形 | `--message="feat: x"`・`-m"feat: x"`・`-m="feat: x"` | 値をlint |
+| 複数指定 | `-m "feat: x" -m "body"` | jjの適用挙動(実測)に合わせ空行で連結してlint |
+| `-m`無し(editor起動) | `jj describe` | lint対象外 |
+| `--stdin` | `echo msg \| jj describe --stdin` | lint対象外(メッセージがstdin由来で静的に特定できない) |
+| 値に展開を含む | `-m "$msg"`・`-m "$(cat f)"` | lint対象外(静的に解決できない) |
+
+`-m ""`のような空メッセージは違反として扱う。
+
 ### シェル記法
 
-コマンド文字列をシェル構文としてパースしたASTから、コマンド名が`jj`(または`.../jj`)のsimple commandを抽出する。走査範囲は以下のとおり(全行を実機確認済み)。
+コマンド文字列をシェル構文としてパースしたASTから、コマンド名が`jj`(または`.../jj`)のsimple commandを抽出する。
+走査範囲は以下のとおり(全行を実機確認済み)。
 
 | 記法 | 例 | 走査 |
 | --- | --- | --- |
@@ -47,7 +72,7 @@ CopilotはcamelCaseの`toolArgs`を使い、コマンドのサブフィールド
 | リダイレクト | `jj describe > /dev/null` | 対応(引数と区別) |
 | コマンド置換 | `$(jj describe)`・`` `jj describe` `` | 対応(内部を走査。ネスト、代入値・ヒアドキュメント・リダイレクト先・パラメータ展開の値の中を含む) |
 | プロセス置換 | `<(jj describe)`・`>(jj describe)` | 対応(内部を走査) |
-| 変数展開 | `-r $rev` | 値を解決しない(revisionとして解決できない対象はlint対象外) |
+| 変数展開 | `-m $msg` | 値を解決しない(メッセージを静的に特定できない対象はlint対象外) |
 | サブシェル・複合構文 | `( )`・`{ }`・`if`・`for`・`while`・`case`・関数定義 | 対応(内部を再帰的に走査) |
 | 条件式 | `[[ -n $(jj describe) ]]` | 対応(operand内の置換を走査) |
 | 算術式 | `(( ))`・`$(( ))` | 非対応(内部を走査しない) |
@@ -57,14 +82,16 @@ CopilotはcamelCaseの`toolArgs`を使い、コマンドのサブフィールド
 
 | 状況 | 出力 | 効果 |
 | --- | --- | --- |
-| 違反 | exit 2 + stderr | 違反をClaude/Codex/Geminiにフィードバック |
+| 違反 | exit 2 + stderr | Claude/Codex/Geminiでコマンドの実行をブロックし、違反をAgentにフィードバック |
 | 実行不可 | exit 1 + stderr | Claude/Codex/Geminiで非ブロック警告 |
 | 通過・対象外 | exit 0・無出力 | 何もしない |
 
 入力を抽出できないHarness(Copilot等)は通過となり、上の効果は生じない。
 
 exit 2 + 非空stderrの扱いは各Harnessの公式hook仕様・実装で確認した。
-Claudeはstderrをモデルへ渡し、Codexはexit 2 + 非空stderrをBlockedとし、Geminiはツール出力をstderrで置換して継続する。
+ClaudeはPreToolUseのexit 2でツール呼び出しをブロックし、stderrをモデルへ渡す(hooks docs)。
+Codexはexit 2 + 非空stderrをBlockedとして実行を止める(`pre_tool_use.rs`)。
+Geminiはexit 2 + 非JSONのstderrをdeny判定に変換して実行を止める(`hookRunner.ts`)。
 AI Agentへ渡す違反内容・警告は簡単な英語で出力する。
 
 ## 構成
@@ -74,13 +101,13 @@ AI Agentへ渡す違反内容・警告は簡単な英語で出力する。
 | `commitlint.sh` | 起動スクリプト(jj事前フィルタ・bun存在確認・依存同期) |
 | `src/main.ts` | エントリ・全体の制御・出力 |
 | `src/input.ts` | hook入力からコマンドを抽出 |
-| `src/command.ts` | コマンドのパースと対象revisionの解析 |
-| `src/lint.ts` | jj説明取得・commitlint実行(リポジトリ設定を優先し、無ければ`@cffnpwr/commitlint-config`をデフォルト) |
+| `src/command.ts` | コマンドのパースと`-m`/`--message`値の抽出 |
+| `src/lint.ts` | commitlint実行(リポジトリ設定を優先し、無ければ`@cffnpwr/commitlint-config`をデフォルト) |
 | `src/types.ts` | 共有型 |
 
 ## Requirements
 
-Hook実行時に内部で呼び出されるbun・jjは実行時にホスト側で利用可能であることを前提とする。
+Hook実行時に内部で呼び出されるbunは実行時にホスト側で利用可能であることを前提とする。
 依存パッケージは`package.json`・`bun.lock`で管理して同梱し、起動スクリプトがロックファイルから同期する。
 外部コマンドが存在しない場合・同期失敗時はfail-open。
 
@@ -98,4 +125,3 @@ Hook実行時に内部で呼び出されるbun・jjは実行時にホスト側�
 | ツール | バージョン要件 |
 | --- | --- |
 | bun | `>= 1.2` |
-| jj | `>= 0.7` |

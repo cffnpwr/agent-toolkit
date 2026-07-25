@@ -1,14 +1,15 @@
 /**
  * jj-commitlint hook本体。
  *
- * HarnessのPostToolUse入力をstdinで受け取る。
- * jj describe/commitが成功した直後の実際のコミット説明を読み出してcommitlintに掛ける。
- * コマンド内のcd移動を畳み込み、各コミットをその有効CWD基準で読み出す。
- * 違反は移植性の高い終了コードのみで全Harnessに伝える。
+ * HarnessのPreToolUse入力をstdinで受け取る。
+ * jj describe/commitのコマンドから-m/--message値を抽出し、実行前にcommitlintに掛ける。
+ * メッセージを静的に特定できない呼び出し(-m無し・--stdin・変数展開等)はlint対象外(fail-open)。
+ * コマンド内のcd移動を畳み込み、各呼び出しの有効CWD基準でcommitlint設定を解決する。
+ * 違反は移植性の高い終了コードのみで全Harnessに伝え、コマンドの実行前にブロックする。
  * 設定はlint対象リポジトリの設定を優先し、無ければ同梱の@cffnpwr/commitlint-configを使う。
  *
  * 出力プロトコル(全Harness共通):
- * - 違反: exit 2 + stderr(Claude/Codex/GeminiはAgentにフィードバック、Copilot等は警告に劣化)
+ * - 違反: exit 2 + stderr(Claude/Codex/Geminiはコマンド実行を止めてAgentにフィードバック)
  * - 実行不可(fail-open): exit 1 + stderr(全Harnessで非ブロック警告)
  * - 通過・対象外: exit 0・無出力
  */
@@ -19,7 +20,7 @@ import { resolveBaseCwd } from "../../shared/src/cdfold.ts";
 
 import { parseTargets } from "./command.ts";
 import { extractCommand, isObject } from "./input.ts";
-import { readDescription, runCommitlint } from "./lint.ts";
+import { runCommitlint } from "./lint.ts";
 
 // 違反フィードバック。
 // 全Harnessがexit 2 + stderrをブロック/フィードバックとして扱う。
@@ -46,30 +47,26 @@ const run = async (): Promise<void> => {
   const baseCwd = resolveBaseCwd(input.cwd);
 
   const targets = parseTargets(command, baseCwd);
-  if (targets.length === 0) return;
 
-  // lint対象の(有効CWD, rev, 説明)を集める。同一(cwd, rev)の重複は除外する。
+  // lint対象の(有効CWD, メッセージ)を集める。同一(cwd, message)の重複は除外する。
   const seen = new Set<string>();
-  const messages: { rev: string; cwd: string; message: string; }[] = [];
+  const messages: { cwd: string; message: string; }[] = [];
   for (const t of targets) {
-    // 有効CWDが不明な対象は、無関係なリポジトリを推測でlintしないためスキップする。
+    if (t.message === null) continue;
+    // 有効CWDが不明な対象は、無関係なリポジトリの設定を推測で使わないためスキップする。
     if (t.cwd === null) continue;
-    for (const rev of t.revs) {
-      const key = `${t.cwd}\0${rev}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const desc = readDescription(rev, t.cwd);
-      if (desc === undefined) continue;
-      messages.push({ rev, cwd: t.cwd, message: desc });
-    }
+    const key = `${t.cwd}\0${t.message}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    messages.push({ cwd: t.cwd, message: t.message });
   }
   if (messages.length === 0) return;
 
   const violations: string[] = [];
-  for (const { rev, cwd, message } of messages) {
-    // 空説明はcommitlintがstdin無しと見なしてヘルプを出すため、直接違反扱いにする。
+  for (const { cwd, message } of messages) {
+    // 空メッセージは設定に依らず違反として直接報告する。
     if (message.trim() === "") {
-      violations.push(`Commit message on rev ${rev} is empty.`);
+      violations.push("Commit message is empty.");
       continue;
     }
     const result = await runCommitlint(message, cwd);
@@ -82,7 +79,7 @@ const run = async (): Promise<void> => {
     }
     if (!result.ok) {
       violations.push(
-        `Commit message on rev ${rev} violates commitlint:\n`
+        "Commit message violates commitlint:\n"
         + `--- message ---\n${message}\n--- violations ---\n${result.report}`,
       );
     }
@@ -90,9 +87,8 @@ const run = async (): Promise<void> => {
 
   if (violations.length > 0) {
     block(
-      `${violations.join("\n\n")}\n\nFix the violations above. `
-      + "You can rewrite the description directly with: "
-      + "jj describe -r <rev> -m \"<fixed message>\".",
+      `${violations.join("\n\n")}\n\nThe command was blocked before execution. `
+      + "Fix the message value and re-run the command.",
     );
   }
 };

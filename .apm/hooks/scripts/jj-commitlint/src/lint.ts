@@ -1,23 +1,9 @@
-import { spawnSync } from "node:child_process";
-
 import type { ParserOptions } from "conventional-commits-parser";
 
 import lint from "@commitlint/lint";
 import load from "@commitlint/load";
 
 import type { LintResult } from "./types.ts";
-
-// 対象revの説明を読み、取得できなければundefinedを返す。
-export const readDescription = (rev: string, cwd: string): string | undefined => {
-  const res = spawnSync(
-    "jj",
-    ["log", "--no-graph", "--ignore-working-copy", "-r", rev, "-T", "description"],
-    { cwd, encoding: "utf8" },
-  );
-  if (res.status !== 0 || typeof res.stdout !== "string") return undefined;
-  // 末尾の改行のみ除去し、本文の改行は保持する。
-  return res.stdout.replace(/\n$/, "");
-};
 
 type QualifiedConfig = Awaited<ReturnType<typeof load>>;
 
