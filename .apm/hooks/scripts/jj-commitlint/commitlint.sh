@@ -1,11 +1,11 @@
 #!/bin/sh
 # jj-commitlint hookの起動スクリプト。
-# PostToolUse入力をstdinで受け、jj関連の操作だけを本体main.tsに渡す。
+# PreToolUse入力をstdinで受け、jj関連の操作だけを本体main.tsに渡す。
 # 対象サブコマンドの判定は本体に委ね、非jj操作はbun起動前に除外する。
 # bunが無いときはfail-openの警告を出して通す。
 set -u
 
-# PostToolUseのJSON入力を取得する。
+# PreToolUseのJSON入力を取得する。
 input=$(cat)
 
 # bunを起動しないための事前フィルタ。
