@@ -74,6 +74,18 @@ describe("main", () => {
     expect(res.stderr).toContain("violates commitlint");
   }, TIMEOUT);
 
+  it.each<[string]>([
+    ["jj new -m \"unknown: do something\""],
+    ["jj split -m \"unknown: do something\""],
+    ["jj squash -m \"unknown: do something\""],
+    ["jj metaedit -m \"unknown: do something\""],
+  ])("[negative] describe/commit以外で説明を設定するコマンド(%s)でも、違反をブロックする", (command) => {
+    const res = runHook(command, repoDir);
+    expect(res.exitCode).toBe(2);
+    expect(res.stdout).toBe("");
+    expect(res.stderr).toContain("violates commitlint");
+  }, TIMEOUT);
+
   it("[negative] 複数-mのとき、連結したメッセージをlintする", () => {
     const res = runHook("jj describe -m \"unknown: a\" -m \"body b\"", repoDir);
     expect(res.exitCode).toBe(2);

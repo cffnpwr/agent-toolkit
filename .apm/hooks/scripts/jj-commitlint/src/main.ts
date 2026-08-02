@@ -2,7 +2,7 @@
  * jj-commitlint hook本体。
  *
  * HarnessのPreToolUse入力をstdinで受け取る。
- * jj describe/commitのコマンドから-m/--message値を抽出し、実行前にcommitlintに掛ける。
+ * 説明を設定するjjサブコマンドから-m/--message値を抽出し、実行前にcommitlintに掛ける。
  * メッセージを静的に特定できない呼び出し(-m無し・--stdin・変数展開等)はlint対象外(fail-open)。
  * コマンド内のcd移動を畳み込み、各呼び出しの有効CWD基準でcommitlint設定を解決する。
  * 違反は移植性の高い終了コードのみで全Harnessに伝え、コマンドの実行前にブロックする。

@@ -1,6 +1,6 @@
 # jj-commitlint
 
-Harnessが`jj describe`/`jj commit`でコミット説明をセットする直前(PreToolUse)に、コマンドの`-m`/`--message`値をcommitlintに掛けるhook。
+Harnessがjjでコミット説明をセットする直前(PreToolUse)に、コマンドの`-m`/`--message`値をcommitlintに掛けるhook。
 違反していればコマンドを実行前にブロックする。
 
 - 介入点はPreToolUse。
@@ -29,18 +29,21 @@ CopilotはcamelCaseの`toolArgs`を使い、コマンドのサブフィールド
 
 ### サブコマンド
 
-検知するサブコマンドは次のとおり。
+検知するサブコマンドは、`-m`/`--message`でコミット説明を設定する次のもの。
 
-| サブコマンド | 既定エイリアス |
-| --- | --- |
-| `describe` | `desc` |
-| `commit` | `ci` |
+| サブコマンド | 既定エイリアス | `-m`の対象 |
+| --- | --- | --- |
+| `describe` | `desc` | 対象revisionの説明 |
+| `commit` | `ci` | 対象revisionの説明 |
+| `new` | - | 新規changeの説明 |
+| `split` | - | 選択した変更を含む側のrevisionの説明 |
+| `squash` | - | squash先revisionの説明 |
+| `metaedit` | - | 対象revisionの説明 |
 
 次のものは検知しない。
 
 | サブコマンド | 状態 | 備考 |
 | --- | --- | --- |
-| `new -m` / `squash -m` / `split -m` | 未対応 | 説明を設定・変更しうるが対象外 |
 | ユーザー定義alias | 検知不能 | `jj config`に依存し、コマンド文字列の静的解析では解決できない |
 
 ### メッセージの解決

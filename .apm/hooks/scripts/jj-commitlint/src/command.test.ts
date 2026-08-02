@@ -14,6 +14,12 @@ describe("parseTargets", () => {
       ["jj commit -m \"feat: x\"", "feat: x"],
       ["jj desc -m \"feat: x\"", "feat: x"],
       ["jj ci -m \"feat: x\"", "feat: x"],
+      ["jj new -m \"feat: x\"", "feat: x"],
+      ["jj split -m \"feat: x\"", "feat: x"],
+      ["jj squash -m \"feat: x\"", "feat: x"],
+      ["jj metaedit -m \"feat: x\"", "feat: x"],
+      ["jj new -m \"feat: x\" main@origin", "feat: x"],
+      ["jj squash --into abc -m \"feat: x\"", "feat: x"],
       ["jj describe --message \"feat: x\"", "feat: x"],
       ["jj describe --message=\"feat: x\"", "feat: x"],
       ["jj describe \"-mfeat: x\"", "feat: x"],
@@ -67,6 +73,8 @@ describe("parseTargets", () => {
       ["jj describe --message=\"$x\""],
       ["jj describe -m\"$x\""],
       ["jj describe -m \"feat: a\" -m \"$body\""],
+      ["jj new"],
+      ["jj squash --into abc"],
     ])("[negative] %s のとき、メッセージを特定できない", (command) => {
       expect(parseTargets(command, BASE)).toEqual([
         { message: null, cwd: BASE },
@@ -84,6 +92,7 @@ describe("parseTargets", () => {
     it("[positive] describeの後段に@を動かすコマンドが連結されても、-m値をそのまま抽出する", () => {
       expect(parseTargets("jj describe -m \"feat: x\" && jj new", BASE)).toEqual([
         { message: "feat: x", cwd: BASE },
+        { message: null, cwd: BASE },
       ]);
     });
 
@@ -96,7 +105,6 @@ describe("parseTargets", () => {
     it.each<[string]>([
       ["ls -la"],
       ["jj log"],
-      ["jj new"],
       ["jj -R /repo"],
       ["echo jj describe -m x"],
     ])("[negative] 非対象コマンド(%s)のとき、空になる", (command) => {
