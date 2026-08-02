@@ -26,6 +26,19 @@ const VALUE_FLAGS = new Set([
   "--color",
 ]);
 
+// -m/--message でコミット説明を設定するサブコマンド(既定エイリアスを含む)。
+// jj 0.43の各サブコマンドヘルプで、-m/--messageが説明を設定することを確認済み。
+const MESSAGE_SUBCOMMANDS = new Set([
+  "describe",
+  "desc",
+  "commit",
+  "ci",
+  "new",
+  "split",
+  "squash",
+  "metaedit",
+]);
+
 // Wordの構成要素を静的に解決する。展開(変数・コマンド置換・グロブ等)を含めばnull。
 const resolvePart = (part: DoubleQuotedChild | WordPart): string | null => {
   switch (part.type) {
@@ -63,7 +76,7 @@ const resolveStatic = (word: Word): string | null => {
 };
 
 /**
- * コマンド文字列をパースし、simple commandごとにjj describe/commit呼び出しを抽出して
+ * コマンド文字列をパースし、simple commandごとに説明を設定するjj呼び出しを抽出して
  * lint対象メッセージ(-m/--message値)と有効CWDを解決する。
  * -mが複数あるときはjjの適用挙動(空行連結)に合わせ"\n\n"でjoinする。
  * メッセージを静的に特定できない呼び出し(-m無し・--stdin・展開を含む値)はmessage: nullとする。
@@ -92,7 +105,7 @@ export const parseTargets = (command: string, baseCwd: Cwd): Target[] => {
     }
     if (subIdx < 0) return;
     const sub = seg[subIdx];
-    if (sub !== "describe" && sub !== "desc" && sub !== "commit" && sub !== "ci") return;
+    if (sub === undefined || !MESSAGE_SUBCOMMANDS.has(sub)) return;
 
     // -m/--message値を出現順に集める。1つでも静的に解決できなければ
     // 連結後のメッセージ全体が確定しないため、呼び出しごとlint対象外にする。
