@@ -139,4 +139,4 @@ stable では **region coverage**（行より細かく条件領域を追う）�
 cargo +nightly llvm-cov --branch    # C1（unstable, nightly 限定）
 ```
 
-stable で C1 を担保する場合は、SKILL.md の方針どおり各分岐の真・偽双方を通すケースを人手で用意する。
+stable で C1 を担保する場合は、SKILL.md の「C1 を求められたときの手順」に従い、各分岐の真・偽双方を通すケースを人手で用意する。

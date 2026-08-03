@@ -110,7 +110,7 @@ export default defineConfig({
 
 ### bun test（C1 計測不可）
 
-`bun test --coverage` は functions / lines のみ報告し、**分岐カバレッジには対応していない**（[oven-sh/bun#7100](https://github.com/oven-sh/bun/issues/7100)、未解決）。SKILL.md の方針どおり、各分岐の真・偽双方を通すケースを人手で用意して C1 を担保する。
+`bun test --coverage` は functions / lines のみ報告し、**分岐カバレッジには対応していない**（[oven-sh/bun#7100](https://github.com/oven-sh/bun/issues/7100)、未解決）。SKILL.md の「C1 を求められたときの手順」に従い、各分岐の真・偽双方を通すケースを人手で用意して C1 を担保する。
 
 ```sh
 bun test --coverage

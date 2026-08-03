@@ -54,19 +54,40 @@ func TestParse(t *testing.T) {
 
 ## アサーション
 
-`testify` を使う。継続してよい検証は `assert`、そこで打ち切るべき前提は `require` を使い分ける。
+`testify` と `github.com/google/go-cmp` を次のように使い分ける。`reflect.DeepEqual` の直書きは使わない（差分が出ず、失敗時に何が違うか読めない）。同じ判定目的に 2 つ以上の道具を使わない。下の用途分割（深い比較と、単純値・エラーの検査）は混在に当たらない。既存が片方だけのリポジトリでは既存慣行を優先し、道具の入れ替えは依頼範囲に含まれるときだけ行う。
+
+- **エラーの有無・種別、単純な値の比較** → `testify`。継続してよい検証は `assert`、そこで打ち切るべき前提は `require` を使い分ける。
+- **構造体・スライス・マップの深い比較** → `cmp.Diff`。
+
+既存が `testify` のみのリポジトリで `go-cmp` を新規依存として足すかは、既存慣行優先に従って判断する。足さない場合、深い比較は `assert.Equal` の失敗出力が読みにくい前提で、比較対象を小さく切る。`cmpopts` の定番は `EquateEmpty`（nil スライスと空スライスを同一視）、`SortSlices`（順序非依存の比較）。
 
 ```go
 import (
+    "github.com/google/go-cmp/cmp"
     "github.com/stretchr/testify/assert"
     "github.com/stretchr/testify/require"
 )
 ```
 
-- **正常系は期待値全体との完全一致で検証する。** `assert.Equal(t, want, got)` は deep equal なので、期待する構造体を 1 つ組み立てて全体を突き合わせる。フィールドごとに `assert.Equal` を並べない。
+- **正常系は期待値全体との完全一致で検証する。** 期待する構造体を 1 つ組み立てて全体を突き合わせる。フィールドごとにアサーションを並べない。
+  - 深い構造では `cmp.Diff` を使う。`testify` の `assert.Equal` は要約行でポインタをアドレスのまま出し（`(*Install)(0x53ba...)`）、Diff 本文は前後 3 行に切られるため、入れ子の構造体スライスで 1 フィールドだけ違う失敗ではどの要素の差分か特定できない。`cmp.Diff` は構造全体の中で差分位置を示す。
+
+    ```go
+    if diff := cmp.Diff(want, got); diff != "" {
+        t.Errorf("Parse() mismatch (-want +got):\n%s", diff)
+    }
+    ```
+
+  - `cmp` は非公開フィールドを持つ型で panic する（値が等しくても panic する）。ただし `time.Time` のように `Equal` メソッドを持つ型は panic しない。panic したら次の順で選ぶ。
+    1. 公開経路（getter・公開フィールドへの射影）で検証できるなら、そちらへ寄せる。
+    2. 非公開フィールドが検証対象なら `cmp.AllowUnexported(T{})` で比較に含める。生成時刻など非決定的な付随フィールドだけを `cmpopts.IgnoreFields(T{}, "fieldName")` / `cmpopts.EquateApproxTime` で個別に除く。
+    3. `cmpopts.IgnoreUnexported(T{})` はその型の非公開フィールドを**すべて**外す。付随状態しか持たない型に限って使う。検証対象のフィールドが混ざっていると、差分があっても diff が空になりテストが緑のまま通る。
+
+    `cmp` はテスト専用パッケージであり、本番コードでは使わない（[pkg doc](https://pkg.go.dev/github.com/google/go-cmp/cmp)）。
 - **異常系はエラーの型・種別まで検証する。メッセージ文言は検証しない。**
   - **独自エラー型を使う場合**: reflect の型一致で検査する（`assert.IsType(t, wantErr, got)`）。ただし `fmt.Errorf("...: %w", err)` でラップされた経路ではトップレベルの具象型しか見ないため一致しない。ラップを跨ぐ場合は `errors.As` を使う。
   - **sentinel エラー値やラップされたエラー**: `errors.Is`（値の一致、`assert.ErrorIs`）/ `errors.As`（型の抽出、`assert.ErrorAs`）で検査する。これらは `%w` ラップをアンラップする。
+  - **エラー型のフィールドを検証する**: `errors.As` で具象型を取り出してから、フィールド全体を `cmp.Diff` / `assert.Equal` で突き合わせる。メッセージ文言との突き合わせに流さない。
 
 ## 境界モック
 
@@ -112,6 +133,21 @@ func TestFetchArticles(t *testing.T) {
 
 `httpmock.ActivateNonDefault(client)` で既定でないクライアントの Transport を差し替える。無依存で済ませたい場合は標準ライブラリの `httptest.NewServer` でローカルにフェイクサーバを立てる。
 
+### 外部コマンド境界
+
+`exec.Command` を処理の中で直接呼ばず、`func(ctx context.Context, name string, args ...string) ([]byte, error)` のような関数型か interface で受け取る。テストでは呼び出し引数を記録するだけの fake を渡し、引数の組み立てと分岐を検証する。
+
+CLI フレームワーク（cobra 等）では、コマンド定義に実処理を直接書くと継ぎ目が消える。実処理は依存としてコマンドへ注入し、テストは (1) 引数解釈と組み立て、(2) コマンドツリーの形、を fake 越しに検証する。
+
+### ファイルシステム境界
+
+**FS 抽象を既定にしない。** 実処理がテスト外へ書き込む問題は、抽象化ではなく**基準ディレクトリを引数で受けること**で消える。目的に応じて次から選ぶ。
+
+- **既定（書き込みを含む処理）**: パスを外から受け、テストで `t.TempDir()` を渡す。実 FS だがテスト外へ漏れず、テストとサブテストの完了時に自動削除される。
+- **読み取りだけのロジックで、実ファイルを置きたくない場合**: `fs.FS` を引数に取り、テストで `testing/fstest.MapFS` を渡す。`io/fs` に書き込み側インターフェースは無いため、書き込みを含む処理には使えない。
+- **ルート外への書き込みを型で禁じたい場合**: `os.OpenRoot` / `*os.Root`（Go 1.24。`WriteFile` / `ReadFile` / `MkdirAll` / `RemoveAll` / `Rename` / `Symlink` は Go 1.25）。本番コード側の封じ込め手段で、テストでは `t.TempDir()` を開いて渡す。
+- **in-memory の書き込み FS が要る場合のみ** `spf13/afero`。第三者依存なので、上の 3 つで足りるなら足さない。
+
 ## カバレッジ
 
 `go test -cover` を使う。
@@ -119,7 +155,14 @@ func TestFetchArticles(t *testing.T) {
 ```sh
 go test -cover ./...
 go test -coverprofile=cover.out ./...
-go tool cover -html=cover.out       # ブラウザで確認
+go tool cover -html=cover.out                          # ブラウザで確認
+
+go test -coverpkg=./... -coverprofile=cover.out ./...  # パッケージを跨いだ呼び出しを含める
+go tool cover -func=cover.out                          # 関数ごとの数値
 ```
 
-Go 標準のカバレッジは **文カバレッジ（C0）** で、`set` / `count` / `atomic` の各モードいずれも計測対象は文。**分岐カバレッジ（C1）は Go 標準ツールでは計測できない。** SKILL.md の方針どおり、各分岐の真・偽双方を通すケースをテーブルに人手で用意して C1 を担保する。
+**既定の `-cover` は、テスト対象パッケージ内からの呼び出しだけを数える。** `go help testflag` の `-coverpkg` の項に「The default is for each test to analyze only the package being tested」とあるとおり、別パッケージのテストからのみ呼ばれる関数は 0.0% と表示される。これを「未テスト」と読み違えないこと。
+
+リポジトリ横断で見るときは `-coverpkg=./...` を付け、`go tool cover -func` で読む。`-coverpkg` を付けてもパッケージ別サマリ行の 0.0% は直らず、各行の意味が「そのテストバイナリがモジュール全体の何 % を通したか」に変わる（そのパッケージを 100% 網羅していても低い数値が出る）。サマリ行の数値は判断に使わない。
+
+Go 標準のカバレッジは **文カバレッジ（C0）** で、`set` / `count` / `atomic` の各モードいずれも計測対象は文。**分岐カバレッジ（C1）は Go 標準ツールでは計測できない。** C1 を求められたときは、SKILL.md の「C1 を求められたときの手順」に従い、分岐の列挙と対応表からケースをテーブルに人手で足して担保する。`go tool cover` の数値を目標にしない。
