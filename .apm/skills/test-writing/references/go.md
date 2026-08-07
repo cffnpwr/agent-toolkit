@@ -30,19 +30,19 @@ go test -v ./...           # 各テストの実行を表示
 ```go
 func TestParse(t *testing.T) {
     tests := []struct {
-        name      string
-        in        string
-        want      int
-        wantErrIs error
+        name    string
+        in      string
+        want    int
+        wantErr error
     }{
         {name: "[positive] 数字のみのとき数値へ変換する", in: "42", want: 42},
-        {name: "[negative] 空文字のときエラーになる", in: "", wantErrIs: ErrEmptyInput},
+        {name: "[negative] 空文字のときエラーになる", in: "", wantErr: ErrEmptyInput},
     }
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            got, err := Parse(tt.in)                        // When
-            if !errors.Is(err, tt.wantErrIs) {              // Then
-                t.Fatalf("Parse() error = %v, want errors.Is(err, %v)", err, tt.wantErrIs)
+            got, err := Parse(tt.in)                                                   // When
+            if diff := cmp.Diff(tt.wantErr, err, cmpopts.EquateErrors()); diff != "" {  // Then
+                t.Fatalf("Parse() error mismatch (-want +got):\n%s", diff)
             }
             if diff := cmp.Diff(tt.want, got); diff != "" {
                 t.Errorf("Parse() mismatch (-want +got):\n%s", diff)
@@ -54,22 +54,64 @@ func TestParse(t *testing.T) {
 
 サブテスト名は `[positive] ` / `[negative] ` を prefix に付け、「A が B のとき C」の形で入力条件と期待結果を書く。構造体スライスが Given、`t.Run` 内が When / Then にあたる。ケースの構造体に導出可能なフィールドを置かないこと・1 つの概念を複数フィールドへ割らないことは[SKILL.md](../SKILL.md)の「構造」に従う。
 
-### エラー分岐の形
+### 対象ごとに 1 つの `Test*` 関数
 
-異常系でそれ以上検証するものが無ければ、エラーを確認して早期 return する。
+**同一の対象に対して `Test*` 関数を 2 つ以上作らない。** よくある崩れ方は次の 2 つで、どちらもテーブルへ収まる。
+
+- **`TestX` と `TestXRequireOS`**: 前提チェック（OS 判定・引数検証）の 1 ケースだけを別関数にする。既存の入力フィールド（対象 OS 等）で表し、サブテスト内で判定して `t.Skip` するか早期 return する。
+- **`TestX` と `TestXSpecificCase`**: 期待値の照合方法が他の行と違うケースだけを別関数にする。前提を表す入力フィールドを 1 つ足して表す。足すのは他のフィールドから導出できない独立した入力に限る（[SKILL.md](../SKILL.md)の「構造」）。
+
+### ケースの構造体に置く関数値
+
+**フィクスチャ・テストダブルの挙動を組み立てる関数値は置いてよい。** Go にはフィクスチャ機構が無い。ケースごとに構造の異なる前提（ダブルが 2 回目の呼び出しで失敗する、対象ディレクトリが読み取り専用である等）を運べるのは、ケースの構造体だけである。無理にデータへ落とすと、実質的な命令コードのフィールドとテスト本体の `switch` ができて悪化する。
+
+**検証と実行そのものを運ぶ関数値は置かない**（`check func(t *testing.T, got Result)`・`do func(sut Service) error` 等）。期待結果と実行対象の列がケースごとのコードになり、テーブルが期待値を述べなくなる。表として読めなくなるのはこちらで、前提の組み立てではない。
+
+データで表せる前提を関数値へ寄せないこと。`t.Parallel()` を使うサブテストでは、共有状態を捕捉したクロージャがデータ競合の発生源になる。
+
+### エラーの検証の形
+
+期待するエラーはテーブルの 1 フィールド `wantErr error` に持たせ、`cmpopts.EquateErrors()` で照合する。**nil（正常系）・sentinel・`%w` でラップされたエラーが同じテーブルに混在しても、分岐なしの 1 つの式で扱える。**
 
 ```go
-if tt.wantErrIs != nil {
-    if !errors.Is(err, tt.wantErrIs) {
-        t.Fatalf("Parse() error = %v, want errors.Is(err, %v)", err, tt.wantErrIs)
-    }
+if diff := cmp.Diff(tt.wantErr, err, cmpopts.EquateErrors()); diff != "" {
+    t.Fatalf("Parse() error mismatch (-want +got):\n%s", diff)
+}
+```
+
+`EquateErrors` は等価判定に `errors.Is(want, got) || errors.Is(got, want)` を使う Comparer である。適用されるのは両辺が `error` を実装するときだけ（go-cmp v0.7.0 の `cmp/cmpopts/equate.go`）。片方が nil のケースはこの Comparer を通らず、通常の比較になる。nil と非 nil は差分として報告され、非公開フィールドを持つエラー型が相手でも panic しない。
+
+- **「非 nil なら何でもよい」ケースは `cmpopts.AnyError` をテーブルに置く。**
+- **型付きエラーをテーブルにリテラルで置いても一致しない。** `errors.Is` はポインタの同一性で比較するため、フィールドが同じ別インスタンスは不一致になる（diff にアドレスが出る）。フィールドまで検証したい場合は下の「型付きエラーのフィールドを検証する」に従う。
+- `go-cmp` を依存に持たないプロジェクトでは、`errors.Is` を直接使い、型で受けるケースが混在する場合のみ `tt.wantErr != nil` の nil ガードを残す。
+
+異常系でそれ以上検証するものが無ければ、エラーの検証のあとに早期 return する。
+
+```go
+if tt.wantErr != nil {
     return
 }
 ```
 
-正常系・異常系の**どちらでも**検証したいもの（外部コマンドの呼び出し列など）があると、早期 return は使えない。ここで `if tt.wantErr { ... } else { ... }` へ広げず、上のテンプレートのようにエラーの検証を 1 つの条件式にまとめ、後続の検証を分岐の外へ置く。
+正常系・異常系の**どちらでも**検証したいもの（外部コマンドの呼び出し列など）があると、早期 return は使えない。上のテンプレートのようにエラーの検証を 1 つの式にまとめ、後続の検証を分岐の外へ置く。この形では異常系でも `got` が期待値（多くはゼロ値）と突き合わされる。エラー時の戻り値を規定したくない場合は早期 return の形を選ぶ。
 
-この形では異常系でも `got` が期待値（多くはゼロ値）と突き合わされる。エラー時の戻り値を規定したくない場合は早期 return の形を選ぶ。
+#### 型付きエラーのフィールドを検証する
+
+`EquateErrors` は `errors.Is` 意味論に還元されるので、エラー型のフィールドは比較されない。次のどちらかを選ぶ。
+
+1. **`errors.As` で取り出して比較する。** エラーの同一性の検証と内容の検証は別物なので、`EquateErrors` の検証と 1 つのテーブルへ混ぜない。エラー型の中身が検証対象なら、それを組み立てる側のテストへ寄せる（「対象ごとに 1 つの `Test*` 関数」に反しない）。非公開フィールドを持つ型では `cmp.AllowUnexported` が要る（後述「何を検証するか」）。
+
+   ```go
+   var got *PathError
+   if !errors.As(err, &got) {
+       t.Fatalf("Parse() error = %v, want *PathError", err)
+   }
+   if diff := cmp.Diff(tt.wantErr, got, cmp.AllowUnexported(PathError{})); diff != "" {
+       t.Errorf("Parse() error mismatch (-want +got):\n%s", diff)
+   }
+   ```
+
+2. **エラー型に `Is(target error) bool` を実装する。** ドメイン上意味のある一致（コード・種別が同じならパスは問わない等）を定義する。`EquateErrors` がそのケースも覆い、テーブルは 1 フィールドのままになる。テストのための比較ロジックを本番コードへ置く取引になるため、その一致がドメインとして意味を持つ場合に限る。
 
 ## アサーション
 
@@ -116,15 +158,17 @@ if tt.wantErrIs != nil {
   - **sentinel エラー値やラップされたエラー**: `errors.Is`（値の一致、`assert.ErrorIs`）/ `errors.As`（型の抽出、`assert.ErrorAs`）で検査する。これらは `%w` ラップをアンラップする。
   - **エラー型のフィールドを検証する**: `errors.As` で具象型を取り出してから、フィールド全体を `cmp.Diff` / `assert.Equal` で突き合わせる。メッセージ文言との突き合わせに流さない。
   - **`errors.Is` / `errors.As` は err が nil のとき false を返す。** エラーの詳細を検証していれば、そこに「エラーが起きたこと」の確認が含まれる。`require.Error` 相当を別に並べない。
-  - **`errors.Is(err, nil)` は `err == nil` と等価。** テーブルの `wantErrIs` が nil のケースでこの性質が効く。「エラーを期待するか」の分岐なしに、正常系・異常系を 1 つの検証で書ける（上のテンプレートがこの形）。
+  - **`errors.Is(err, nil)` は `err == nil` と等価。** 「エラーを期待するか」の分岐なしに、正常系・異常系を 1 つの検証で書ける。`cmpopts.EquateErrors()` を使う形（上の「エラーの検証の形」）は、この性質に依っている。
 
     いずれも `$(go env GOROOT)/src/errors/wrap.go` で確認できる。`Is` は `err == nil || target == nil` のとき `err == target` を返し、`As` は先頭で `err == nil` を弾く。
-
-    **値で受けるケースと型で受けるケースが同じテーブルに混在するときは、この形にできない。** 型で受けるケースでは、非 nil の err に対して `wantErrIs` が nil になる。`errors.Is(err, nil)` が false になるため、`wantErrIs != nil` の nil ガードを残す。
 
 ## 境界モック
 
 外部境界は interface で表す。
+
+**ダブルを書く前に、本番コードがその interface の何を使っているかを数える。** 2〜3 個なら、その値を引数で受け取る形にできないか検討する。`os.FileInfo` を受けていた関数が `Mode()` と `ModTime()` しか使っていないなら、引数を `os.FileMode` と `time.Time` に変えればよい。ダブルごと不要になり、テストは値を直接渡せる。
+
+**interface を nil のまま埋め込んで一部のメソッドだけ上書きするダブルは書かない。** 未実装のメソッドが呼ばれた瞬間に nil 参照で panic し、失敗の理由が読めない。
 
 - **小さな境界は手書きの fake 実装を基本にする。** interface を満たす構造体をテスト側に定義し、実物に近い挙動を持たせる。
 - **境界が多い・複雑な場合は `gomock`（`go.uber.org/mock`）で生成する。**
