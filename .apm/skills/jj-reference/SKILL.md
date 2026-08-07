@@ -193,6 +193,52 @@ jj log    # コンフリクトを含むコミットに印が付く
 
 リベースで生じたコンフリクトは子孫のコミットへ伝播する。`jj edit CHANGE_ID`で当該コミットへ移動して解決すると、解決結果も子孫へ伝播する。
 
+## コミットを書き換える操作の連続実行
+
+既存コミットを書き換える操作（`jj squash --into`・`jj rebase`・`jj describe`）は、**その子孫をリベースする。** 子孫のcommit IDはすべて変わる。連続で行うときは、毎回`jj log`でIDを取り直す。
+
+古いcommit IDも到達可能なため、**jjはエラーにせず古いコミットを対象にする。** 同じchange IDのコミットが2つ可視になり（divergent change）、本線に変更が入らない。jj 0.43.0での実際の挙動を次に示す。
+
+```console
+$ jj squash --into 90310fe4 -u      # A へ寄せる。子孫 B がリベースされる
+Rebased 1 descendant commits
+Parent commit (@-)      : vykxworz 2715f63d feat: B    # B の commit ID が 9dc6d73a から変わった
+
+$ jj squash --into 9dc6d73a -u      # 書き換え前の B の ID を渡す（エラーにならない）
+Parent commit (@-)      : vykxworz/1 2715f63d (divergent) feat: B
+```
+
+```console
+$ jj log
+@  pqulzpnw 7de5e561
+○  vykxworz/1 2715f63d (divergent) feat: B     # 本線。2回目の変更は入っていない
+○  kmmnttpq/0 b3d804b3 (divergent) feat: A
+│ ○  vykxworz/0 5b13ba34 (divergent) feat: B   # 2回目の変更はこちらへ入った
+│ ○  kmmnttpq/1 90310fe4 (divergent) feat: A
+├─╯
+◆  zzzzzzzz root() 00000000
+```
+
+`jj log`のchange IDに`/0`・`/1`の添字と`(divergent)`が付くことで気づける。
+
+**予防は、参照にchange IDを使うこと。** change IDは書き換えを跨いで安定なので、取り直しが要らない（[AIエージェント運用上の注意](#aiエージェント運用上の注意)）。
+
+発生したときの復旧手順を次に示す。
+
+1. 孤立した側のコミットから内容を取り出す。
+
+   ```bash
+   jj file show FILE -r 5b13ba34
+   ```
+
+2. 孤立した側を破棄する。
+
+   ```bash
+   jj abandon 5b13ba34 90310fe4
+   ```
+
+3. 作業コピーへ書き戻し、正しいコミット（change IDで指定する）へ`jj squash --into`で寄せる。
+
 ## よくあるワークフロー
 
 ### mainから新規作業を開始
