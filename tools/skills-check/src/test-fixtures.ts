@@ -2,13 +2,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { Finding, Skill } from "./types.ts";
+import type { Skill } from "./types.ts";
 
 /** テストで使う妥当な`description`。 */
 export const VALID_DESCRIPTION = "何をするスキルで、いつ使うかを述べる説明。";
-
-/** `Finding`の配列から種別だけを取り出す。 */
-export const codesOf = (findings: readonly Finding[]): string[] => findings.map((finding) => finding.code);
 
 /**
  * ファイルを持たないスキルを組み立てる。

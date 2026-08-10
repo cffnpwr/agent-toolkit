@@ -37,14 +37,8 @@ describe("checkSkill", () => {
     const problems = checkSkill(dir);
 
     // Then
-    expect(problems).toEqual([
-      {
-        skill: "sample-skill",
-        code: "missing-skill-md",
-        source: "spec",
-        level: "must",
-        message: problems[0]?.message ?? "",
-      },
+    expect(problems).toMatchObject([
+      { skill: "sample-skill", code: "missing-skill-md", source: "spec", level: "must" },
     ]);
   });
 

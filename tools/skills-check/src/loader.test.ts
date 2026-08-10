@@ -19,16 +19,16 @@ afterEach(() => {
 
 describe("skillNameOf", () => {
   test.each([
-    ["[positive] 絶対パス", "/a/b/sample-skill", "sample-skill"],
-    ["[positive] 末尾のスラッシュ", "/a/b/sample-skill/", "sample-skill"],
-  ])("%s からディレクトリ名を取る", (_label, input, expected) => {
+    ["[positive] 絶対パスを渡すとディレクトリ名を取る", "/a/b/sample-skill", "sample-skill"],
+    ["[positive] 末尾にスラッシュがあってもディレクトリ名を取る", "/a/b/sample-skill/", "sample-skill"],
+  ])("%s", (_label, input, expected) => {
     // Given / When / Then
     expect(skillNameOf(input)).toBe(expected);
   });
 });
 
 describe("loadSkillLocation", () => {
-  test("[positive] スキルの位置を返す", () => {
+  test("[positive] 有効なスキルディレクトリを渡すとスキルの位置を返す", () => {
     // Given
     const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": skillMdOf("sample-skill") });
 
@@ -36,8 +36,9 @@ describe("loadSkillLocation", () => {
     const result = loadSkillLocation(dir);
 
     // Then
-    expect(result.isOk()).toBe(true);
-    expect(result.unwrap()).toEqual({
+    expect(result.isOk()).toBeTrue();
+    const value = result.unwrap();
+    expect(value).toEqual({
       name: "sample-skill",
       dir,
       skillMdPath: join(dir, "SKILL.md"),
@@ -55,10 +56,12 @@ describe("loadSkillLocation", () => {
     process.chdir(previousCwd);
 
     // Then
-    expect(result.unwrap().dir.startsWith("/")).toBe(true);
+    expect(result.isOk()).toBeTrue();
+    const value = result.unwrap();
+    expect(value.dir.startsWith("/")).toBe(true);
   });
 
-  test("[negative] ディレクトリでないパス", () => {
+  test("[negative] ディレクトリでないパスを渡すとnot-a-directoryエラーをパスとともに返す", () => {
     // Given
     const path = join(workspace.root, "not-a-dir");
     writeFileSync(path, "", "utf8");
@@ -67,19 +70,23 @@ describe("loadSkillLocation", () => {
     const result = loadSkillLocation(path);
 
     // Then
-    expect(result.unwrapErr().code).toBe("not-a-directory");
-    expect(result.unwrapErr().level).toBe("must");
+    expect(result.isErr()).toBeTrue();
+    const value = result.unwrapErr();
+    expect(value).toMatchObject({ code: "not-a-directory", source: "spec", level: "must" });
+    expect(value.message).toContain(path);
   });
 
-  test("[negative] 存在しないパス", () => {
+  test("[negative] 存在しないパスを渡すとnot-a-directoryエラーを返す", () => {
     // Given / When
     const result = loadSkillLocation(join(workspace.root, "missing"));
 
     // Then
-    expect(result.unwrapErr().code).toBe("not-a-directory");
+    expect(result.isErr()).toBeTrue();
+    const value = result.unwrapErr();
+    expect(value).toMatchObject({ code: "not-a-directory", source: "spec", level: "must" });
   });
 
-  test("[negative] SKILL.mdがないディレクトリ", () => {
+  test("[negative] SKILL.mdがないディレクトリを渡すとmissing-skill-mdエラーをパスとともに返す", () => {
     // Given
     const dir = workspace.makeSkillDir("sample-skill", {});
 
@@ -87,6 +94,9 @@ describe("loadSkillLocation", () => {
     const result = loadSkillLocation(dir);
 
     // Then
-    expect(result.unwrapErr().code).toBe("missing-skill-md");
+    expect(result.isErr()).toBeTrue();
+    const value = result.unwrapErr();
+    expect(value).toMatchObject({ code: "missing-skill-md", source: "spec", level: "must" });
+    expect(value.message).toContain(dir);
   });
 });

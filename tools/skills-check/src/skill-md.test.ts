@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { join } from "node:path";
 
+import { parse as parseYaml } from "yaml";
+
 import type { TempWorkspace } from "./test-fixtures.ts";
 
 import { loadSkillLocation } from "./loader.ts";
@@ -12,7 +14,7 @@ import {
   parseFrontmatter,
   readSkillMd,
 } from "./skill-md.ts";
-import { codesOf, createTempWorkspace, skillMdOf, VALID_DESCRIPTION } from "./test-fixtures.ts";
+import { createTempWorkspace, skillMdOf, VALID_DESCRIPTION } from "./test-fixtures.ts";
 
 const VALID = { name: "sample-skill", description: VALID_DESCRIPTION };
 
@@ -35,38 +37,74 @@ describe("parseFrontmatter", () => {
     const result = parseFrontmatter(content);
 
     // Then
-    expect(result.isOk()).toBe(true);
-    expect(result.unwrap()).toEqual({ description: "前半の行 後半の行\n" });
+    expect(result.isOk()).toBeTrue();
+    const value = result.unwrap();
+    expect(value).toEqual({ description: "前半の行 後半の行\n" });
   });
 
   test.each([
-    ["[negative] フロントマターがない", "本文のみ\n", "frontmatter-missing"],
-    ["[negative] YAMLとして壊れている", "---\nname: [unclosed\n---\n", "frontmatter-invalid-yaml"],
-    ["[negative] マッピングでない", "---\n- item\n---\n", "frontmatter-not-mapping"],
-    ["[negative] 中身が空", "---\n\n---\n", "frontmatter-not-mapping"],
-  ])("%s 内容は種別付きの Err を返す", (_label, content, expected) => {
+    [
+      "[negative] フロントマターがないときfrontmatter-missingを返す",
+      "本文のみ\n",
+      { code: "frontmatter-missing", source: "spec", level: "must" },
+    ],
+    [
+      "[negative] マッピングでない構造のときfrontmatter-not-mappingを返す",
+      "---\n- item\n---\n",
+      { code: "frontmatter-not-mapping", source: "spec", level: "must" },
+    ],
+    [
+      "[negative] 中身が空のときfrontmatter-not-mappingを返す",
+      "---\n\n---\n",
+      { code: "frontmatter-not-mapping", source: "spec", level: "must" },
+    ],
+  ])("%s", (_label, content, expected) => {
     // Given / When
     const result = parseFrontmatter(content);
 
     // Then
-    expect(result.isErr()).toBe(true);
-    expect(result.unwrapErr().code).toBe(expected);
-    expect(result.unwrapErr().level).toBe("must");
+    expect(result.isErr()).toBeTrue();
+    const value = result.unwrapErr();
+    expect(value).toMatchObject(expected);
+  });
+
+  test("[negative] YAMLとして壊れているときパーサのエラー文字列を添えてfrontmatter-invalid-yamlを返す", () => {
+    // Given: フロントマター部分は"name: [unclosed"（閉じていないフローシーケンス）
+    const inner = "name: [unclosed";
+    const content = `---\n${inner}\n---\n`;
+
+    // When
+    const result = parseFrontmatter(content);
+
+    // Then
+    expect(result.isErr()).toBeTrue();
+    const value = result.unwrapErr();
+    expect(value).toMatchObject({ code: "frontmatter-invalid-yaml", source: "spec", level: "must" });
+
+    // 本番コードと同じ入力をパーサへ直接渡し、実際のエラー文字列を得る
+    let parserError = "";
+    try {
+      parseYaml(inner);
+    } catch (error) {
+      parserError = String(error);
+    }
+    expect(parserError).not.toBe("");
+    expect(value.message).toContain(parserError);
   });
 });
 
 describe("checkFrontmatterSchema", () => {
   test.each([
-    ["[positive] 必須フィールドのみ", VALID],
-    ["[positive] 仕様の任意フィールドを備える", {
+    ["[positive] 必須フィールドのみのとき問題を報告しない", VALID],
+    ["[positive] 仕様の任意フィールドをすべて備えていても問題を報告しない", {
       ...VALID,
       license: "MIT",
       "allowed-tools": "Read Grep",
       compatibility: "Requires git",
       metadata: { author: "example" },
     }],
-    ["[positive] 仕様外フィールドがある", { ...VALID, "disable-model-invocation": true }],
-  ])("%s は問題を返さない", (_label, frontmatter) => {
+    ["[positive] 仕様外フィールドがあっても問題を報告しない", { ...VALID, "disable-model-invocation": true }],
+  ])("%s", (_label, frontmatter) => {
     // Given / When
     const findings = checkFrontmatterSchema(frontmatter as Record<string, unknown>);
 
@@ -74,65 +112,98 @@ describe("checkFrontmatterSchema", () => {
     expect(findings).toEqual([]);
   });
 
-  test("[negative] 必須フィールドの欠落を両方報告する", () => {
+  test("[negative] 必須フィールドが両方欠けているとき両方を報告する", () => {
     // Given / When
     const findings = checkFrontmatterSchema({});
 
-    // Then
-    expect(codesOf(findings).sort()).toEqual(["description-missing", "name-missing"]);
+    // Then: 順序に関わらず両方のfindingを報告する
+    // 順序は保証されないため、codeで揃えてから照合する
+    expect([...findings].sort((a, b) => a.code.localeCompare(b.code))).toMatchObject([
+      { code: "description-missing", source: "spec", level: "must" },
+      { code: "name-missing", source: "spec", level: "must" },
+    ]);
   });
 
   test.each([
-    ["[negative] 空文字列の名前", { ...VALID, name: "" }, ["name-not-string"]],
-    ["[negative] 文字列でない名前", { ...VALID, name: 42 }, ["name-not-string"]],
     [
-      "[negative] 上限を超える名前",
+      "[negative] 名前が空文字列のとき文字種の違反を重ねずname-not-stringだけを報告する",
+      { ...VALID, name: "" },
+      [{ code: "name-not-string", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 名前が文字列でないときname-not-stringを報告する",
+      { ...VALID, name: 42 },
+      [{ code: "name-not-string", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 名前が上限文字数を超えるときname-too-longを報告する",
       { ...VALID, name: "a".repeat(MAX_NAME_LENGTH + 1) },
-      ["name-too-long"],
+      [{ code: "name-too-long", source: "spec", level: "must" }],
     ],
-    ["[negative] 大文字を含む名前", { ...VALID, name: "Sample" }, ["name-invalid-chars"]],
-    ["[negative] 全角文字の名前", { ...VALID, name: "サンプル" }, ["name-invalid-chars"]],
     [
-      "[negative] アンダースコアを含む名前",
+      "[negative] 名前に大文字を含むときname-invalid-charsを報告する",
+      { ...VALID, name: "Sample" },
+      [{ code: "name-invalid-chars", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 名前が全角文字のときname-invalid-charsを報告する",
+      { ...VALID, name: "サンプル" },
+      [{ code: "name-invalid-chars", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 名前にアンダースコアを含むときname-invalid-charsを報告する",
       { ...VALID, name: "sample_skill" },
-      ["name-invalid-chars"],
+      [{ code: "name-invalid-chars", source: "spec", level: "must" }],
     ],
-    ["[negative] 空文字列の説明", { ...VALID, description: "" }, ["description-not-string"]],
-    ["[negative] 空白のみの説明", { ...VALID, description: "   " }, ["description-not-string"]],
     [
-      "[negative] 上限を超える説明",
+      "[negative] 説明が空文字列のときdescription-not-stringを報告する",
+      { ...VALID, description: "" },
+      [{ code: "description-not-string", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 説明が空白のみのときdescription-not-stringを報告する",
+      { ...VALID, description: "   " },
+      [{ code: "description-not-string", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 説明が上限文字数を超えるときdescription-too-longを報告する",
       { ...VALID, description: "あ".repeat(MAX_DESCRIPTION_LENGTH + 1) },
-      ["description-too-long"],
+      [{ code: "description-too-long", source: "spec", level: "must" }],
     ],
     [
-      "[negative] 文字列でないcompatibility",
+      "[negative] 説明が空白のみで上限文字数も超えるとき長さの違反を重ねずdescription-not-stringだけを報告する",
+      { ...VALID, description: " ".repeat(MAX_DESCRIPTION_LENGTH + 1) },
+      [{ code: "description-not-string", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] compatibilityが文字列でないときcompatibility-not-stringを報告する",
       { ...VALID, compatibility: ["git"] },
-      ["compatibility-not-string"],
+      [{ code: "compatibility-not-string", source: "spec", level: "must" }],
     ],
     [
-      "[negative] 上限を超えるcompatibility",
+      "[negative] compatibilityが上限文字数を超えるときcompatibility-too-longを報告する",
       { ...VALID, compatibility: "a".repeat(MAX_COMPATIBILITY_LENGTH + 1) },
-      ["compatibility-too-long"],
+      [{ code: "compatibility-too-long", source: "spec", level: "must" }],
     ],
     [
-      "[negative] マッピングでないmetadata",
+      "[negative] metadataがマッピングでないときmetadata-not-mappingを報告する",
       { ...VALID, metadata: "plain-string" },
-      ["metadata-not-mapping"],
+      [{ code: "metadata-not-mapping", source: "spec", level: "must" }],
     ],
     [
-      "[negative] 文字列でない値を持つmetadata",
+      "[negative] metadataの値が文字列でないときmetadata-not-string-mapを報告する",
       { ...VALID, metadata: { version: 1 } },
-      ["metadata-not-string-map"],
+      [{ code: "metadata-not-string-map", source: "spec", level: "must" }],
     ],
-  ])("%s を種別で報告する", (_label, frontmatter, expected) => {
+  ])("%s", (_label, frontmatter, expected) => {
     // Given / When
     const findings = checkFrontmatterSchema(frontmatter as Record<string, unknown>);
 
     // Then
-    expect(codesOf(findings).sort()).toEqual(expected as string[]);
+    expect(findings).toMatchObject(expected);
   });
 
-  test("[negative] 文字数はUTF-16符号単位で数える", () => {
+  test("[negative] 文字数はUTF-16符号単位で数えて上限超過を報告する", () => {
     // Given: 非BMP文字はコードポイント1つに対しUTF-16では2つを占める
     const description = "🧑".repeat((MAX_DESCRIPTION_LENGTH / 2) + 1);
 
@@ -141,20 +212,12 @@ describe("checkFrontmatterSchema", () => {
 
     // Then
     expect([...description].length).toBeLessThanOrEqual(MAX_DESCRIPTION_LENGTH);
-    expect(codesOf(findings)).toEqual(["description-too-long"]);
-  });
-
-  test("[negative] 空の名前では文字種と長さの違反を重ねて報告しない", () => {
-    // Given / When
-    const findings = checkFrontmatterSchema({ ...VALID, name: "" });
-
-    // Then
-    expect(codesOf(findings)).toEqual(["name-not-string"]);
+    expect(findings).toMatchObject([{ code: "description-too-long", source: "spec", level: "must" }]);
   });
 });
 
 describe("readSkillMd", () => {
-  test("[positive] 読み込んだスキルを返す", () => {
+  test("[positive] 有効なSKILL.mdを読み込むとスキルを返す", () => {
     // Given
     const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": skillMdOf("sample-skill") });
     const location = loadSkillLocation(dir).unwrap();
@@ -163,12 +226,13 @@ describe("readSkillMd", () => {
     const result = readSkillMd(location);
 
     // Then
-    expect(result.isOk()).toBe(true);
-    expect(result.unwrap().frontmatter.name).toBe("sample-skill");
-    expect(result.unwrap().skillMdPath).toBe(join(dir, "SKILL.md"));
+    expect(result.isOk()).toBeTrue();
+    const value = result.unwrap();
+    expect(value.frontmatter.name).toBe("sample-skill");
+    expect(value.skillMdPath).toBe(join(dir, "SKILL.md"));
   });
 
-  test("[negative] フロントマターを読めない場合は1件返す", () => {
+  test("[negative] フロントマターを読めないときfrontmatter-missingを1件返す", () => {
     // Given
     const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": "本文のみ\n" });
     const location = loadSkillLocation(dir).unwrap();
@@ -177,10 +241,12 @@ describe("readSkillMd", () => {
     const result = readSkillMd(location);
 
     // Then
-    expect(codesOf(result.unwrapErr())).toEqual(["frontmatter-missing"]);
+    expect(result.isErr()).toBeTrue();
+    const value = result.unwrapErr();
+    expect(value).toMatchObject([{ code: "frontmatter-missing", source: "spec", level: "must" }]);
   });
 
-  test("[negative] スキーマ違反をまとめて返す", () => {
+  test("[negative] スキーマ違反が複数あるときまとめて返す", () => {
     // Given
     const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": "---\nlicense: MIT\n---\n" });
     const location = loadSkillLocation(dir).unwrap();
@@ -188,7 +254,13 @@ describe("readSkillMd", () => {
     // When
     const result = readSkillMd(location);
 
-    // Then
-    expect(codesOf(result.unwrapErr()).sort()).toEqual(["description-missing", "name-missing"]);
+    // Then: 順序に関わらずスキーマ違反をすべて報告する
+    expect(result.isErr()).toBeTrue();
+    const value = result.unwrapErr();
+    // 順序は保証されないため、codeで揃えてから照合する
+    expect([...value].sort((a, b) => a.code.localeCompare(b.code))).toMatchObject([
+      { code: "description-missing", source: "spec", level: "must" },
+      { code: "name-missing", source: "spec", level: "must" },
+    ]);
   });
 });

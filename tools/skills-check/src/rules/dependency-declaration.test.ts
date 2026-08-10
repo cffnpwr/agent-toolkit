@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { codesOf, skillOf, VALID_DESCRIPTION } from "../test-fixtures.ts";
+import { skillOf, VALID_DESCRIPTION } from "../test-fixtures.ts";
 
 import { dependencyDeclarationRule } from "./dependency-declaration.ts";
 
@@ -8,47 +8,36 @@ const BASE = { name: "sample-skill", description: VALID_DESCRIPTION };
 
 describe("dependencyDeclarationRule", () => {
   test.each([
-    ["[positive] 両方そろっている", { ...BASE, compatibility: "Requires git" }, "## Requirements\n", []],
-    ["[positive] どちらもない", BASE, "本文のみ\n", []],
     [
-      "[negative] compatibilityのみ",
+      "[positive] compatibilityとRequirements節の両方があるとき問題を報告しない",
+      { ...BASE, compatibility: "Requires git" },
+      "## Requirements\n",
+      [],
+    ],
+    ["[positive] compatibilityとRequirements節のどちらもないとき問題を報告しない", BASE, "本文のみ\n", []],
+    [
+      "[negative] compatibilityのみでRequirements節がないとき問題を報告する",
       { ...BASE, compatibility: "Requires git" },
       "本文のみ\n",
-      ["compatibility-without-requirements"],
+      [{ code: "compatibility-without-requirements", source: "repo", level: "must" }],
     ],
     [
-      "[negative] Requirements節のみ",
+      "[negative] Requirements節のみでcompatibilityがないとき問題を報告する",
       BASE,
       "## Requirements\n",
-      ["requirements-without-compatibility"],
+      [{ code: "requirements-without-compatibility", source: "repo", level: "must" }],
+    ],
+    [
+      "[positive] Requirementsが見出しでなく本文中に出てくるだけのとき問題を報告しない",
+      BASE,
+      "本文で Requirements について述べる。\n",
+      [],
     ],
   ])("%s", (_label, frontmatter, content, expected) => {
     // Given / When
     const findings = dependencyDeclarationRule(skillOf({ frontmatter, content }));
 
     // Then
-    expect(codesOf(findings)).toEqual(expected);
-  });
-
-  test("[positive] 見出しでない Requirements の記述を節と見なさない", () => {
-    // Given
-    const content = "本文で Requirements について述べる。\n";
-
-    // When
-    const findings = dependencyDeclarationRule(skillOf({ frontmatter: BASE, content }));
-
-    // Then
-    expect(findings).toEqual([]);
-  });
-
-  test("[negative] リポジトリ規約として報告する", () => {
-    // Given / When
-    const findings = dependencyDeclarationRule(
-      skillOf({ frontmatter: { ...BASE, compatibility: "git" }, content: "本文\n" }),
-    );
-
-    // Then
-    expect(findings[0]?.source).toBe("repo");
-    expect(findings[0]?.level).toBe("must");
+    expect(findings).toMatchObject(expected);
   });
 });

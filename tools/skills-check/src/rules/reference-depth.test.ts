@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import type { TempWorkspace } from "../test-fixtures.ts";
 
-import { codesOf, createTempWorkspace } from "../test-fixtures.ts";
+import { createTempWorkspace } from "../test-fixtures.ts";
 
 import { referencedDocumentPaths, referenceDepthRule } from "./reference-depth.ts";
 
@@ -48,12 +48,12 @@ describe("referencedDocumentPaths", () => {
   });
 
   test.each([
-    ["[negative] 外部URL", "[外部](https://example.com/a.md)"],
-    ["[negative] ページ内アンカーのみ", "[節](#section)"],
-    ["[negative] Markdown以外のファイル", "[script](scripts/run.sh)"],
-    ["[negative] 実在しないファイル", "[無い](references/missing.md)"],
-    ["[negative] スキルの外にあるファイル", "[外](../outside.md)"],
-  ])("%s は返さない", (_label, link) => {
+    ["[negative] 外部URLへのリンクは対象に含めない", "[外部](https://example.com/a.md)"],
+    ["[negative] ページ内アンカーのみのリンクは対象に含めない", "[節](#section)"],
+    ["[negative] Markdown以外のファイルへのリンクは対象に含めない", "[script](scripts/run.sh)"],
+    ["[negative] 実在しないファイルへのリンクは対象に含めない", "[無い](references/missing.md)"],
+    ["[negative] スキルの外にあるファイルへのリンクは対象に含めない", "[外](../outside.md)"],
+  ])("%s", (_label, link) => {
     // Given
     writeFileSync(join(workspace.root, "outside.md"), "外部\n", "utf8");
     const skill = workspace.makeSkill("sample-skill", {
@@ -70,7 +70,7 @@ describe("referencedDocumentPaths", () => {
 });
 
 describe("referenceDepthRule", () => {
-  test("[positive] 1階層の参照のみ", () => {
+  test("[positive] 1階層の参照のみのとき問題を報告しない", () => {
     // Given
     const skill = workspace.makeSkill("sample-skill", {
       "SKILL.md": "[手順](references/guide.md)\n",
@@ -125,13 +125,11 @@ describe("referenceDepthRule", () => {
     const findings = referenceDepthRule(skill);
 
     // Then
-    expect(codesOf(findings)).toEqual(["reference-too-deep"]);
+    expect(findings).toMatchObject([{ code: "reference-too-deep", source: "spec", level: "should" }]);
     expect(findings[0]?.message).toContain("references/b.md");
-    expect(findings[0]?.source).toBe("spec");
-    expect(findings[0]?.level).toBe("should");
   });
 
-  test("[negative] 連鎖が複数あれば件数分を返す", () => {
+  test("[negative] 連鎖が複数あるとき連鎖ごとに問題を報告する", () => {
     // Given
     const skill = workspace.makeSkill("sample-skill", {
       "SKILL.md": "[一](references/a.md)\n",
@@ -144,6 +142,9 @@ describe("referenceDepthRule", () => {
     const findings = referenceDepthRule(skill);
 
     // Then
-    expect(codesOf(findings)).toEqual(["reference-too-deep", "reference-too-deep"]);
+    expect(findings).toMatchObject([
+      { code: "reference-too-deep", source: "spec", level: "should" },
+      { code: "reference-too-deep", source: "spec", level: "should" },
+    ]);
   });
 });

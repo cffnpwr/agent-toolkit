@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { codesOf, skillOf, VALID_DESCRIPTION } from "../test-fixtures.ts";
+import { skillOf, VALID_DESCRIPTION } from "../test-fixtures.ts";
 
 import { extraFieldsRule, SPEC_FIELDS } from "./extra-fields.ts";
 
 const BASE = { name: "sample-skill", description: VALID_DESCRIPTION };
 
 describe("extraFieldsRule", () => {
-  test("[positive] 必須フィールドのみ", () => {
+  test("[positive] 必須フィールドのみのとき問題を報告しない", () => {
     // Given / When
     const findings = extraFieldsRule(skillOf({ frontmatter: BASE }));
 
@@ -15,7 +15,7 @@ describe("extraFieldsRule", () => {
     expect(findings).toEqual([]);
   });
 
-  test("[positive] 仕様が定めるフィールドをすべて備える", () => {
+  test("[positive] 仕様が定めるフィールドをすべて備えているとき問題を報告しない", () => {
     // Given
     const frontmatter = Object.fromEntries(SPEC_FIELDS.map((field) => [field, "value"]));
 
@@ -26,33 +26,23 @@ describe("extraFieldsRule", () => {
     expect(findings).toEqual([]);
   });
 
-  test("[negative] 仕様外フィールドを名前付きで報告する", () => {
+  test("[negative] 仕様外フィールドがあるとき問題をフィールド名とともに報告する", () => {
     // Given / When
     const findings = extraFieldsRule(
       skillOf({ frontmatter: { ...BASE, "disable-model-invocation": true } }),
     );
 
     // Then
-    expect(codesOf(findings)).toEqual(["extra-fields"]);
+    expect(findings).toMatchObject([{ code: "extra-fields", source: "spec", level: "should" }]);
     expect(findings[0]?.message).toContain("disable-model-invocation");
   });
 
-  test("[negative] 複数の仕様外フィールドを整列して並べる", () => {
+  test("[negative] 複数の仕様外フィールドがあるときアルファベット順に整列してメッセージに含める", () => {
     // Given / When
-    const findings = extraFieldsRule(
-      skillOf({ frontmatter: { ...BASE, zeta: 1, alpha: 2 } }),
-    );
+    const findings = extraFieldsRule(skillOf({ frontmatter: { ...BASE, zeta: 1, alpha: 2 } }));
 
     // Then
+    expect(findings).toMatchObject([{ code: "extra-fields", source: "spec", level: "should" }]);
     expect(findings[0]?.message).toContain("alpha, zeta");
-  });
-
-  test("[negative] 推奨として報告する", () => {
-    // Given / When
-    const findings = extraFieldsRule(skillOf({ frontmatter: { ...BASE, extra: 1 } }));
-
-    // Then
-    expect(findings[0]?.source).toBe("spec");
-    expect(findings[0]?.level).toBe("should");
   });
 });
