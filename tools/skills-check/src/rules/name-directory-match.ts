@@ -1,6 +1,10 @@
-import type { Rule } from "../types.ts";
+import type { Rule, Skill } from "../types.ts";
 
-import { normalizedName } from "./skill-name.ts";
+/**
+ * フロントマターの`name`をNFKC正規化して返す。
+ * ルールが受け取るスキルはスキーマ検査を通っているため、`name`は空でない文字列である。
+ */
+const normalizedName = (skill: Skill): string => String(skill.frontmatter.name).normalize("NFKC");
 
 /** `name`がディレクトリ名と一致することを確かめる。 */
 export const nameDirectoryMatchRule: Rule = (skill) => {

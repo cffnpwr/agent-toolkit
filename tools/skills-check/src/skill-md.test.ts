@@ -141,19 +141,44 @@ describe("checkFrontmatterSchema", () => {
       [{ code: "name-too-long", source: "spec", level: "must" }],
     ],
     [
-      "[negative] 名前に大文字を含むときname-invalid-charsを報告する",
+      "[negative] 名前に大文字を含むときname-invalid-formatを報告する",
       { ...VALID, name: "Sample" },
-      [{ code: "name-invalid-chars", source: "spec", level: "must" }],
+      [{ code: "name-invalid-format", source: "spec", level: "must" }],
     ],
     [
-      "[negative] 名前が全角文字のときname-invalid-charsを報告する",
+      "[negative] 名前が全角文字のときname-invalid-formatを報告する",
       { ...VALID, name: "サンプル" },
-      [{ code: "name-invalid-chars", source: "spec", level: "must" }],
+      [{ code: "name-invalid-format", source: "spec", level: "must" }],
     ],
     [
-      "[negative] 名前にアンダースコアを含むときname-invalid-charsを報告する",
+      "[negative] 名前にアンダースコアを含むときname-invalid-formatを報告する",
       { ...VALID, name: "sample_skill" },
-      [{ code: "name-invalid-chars", source: "spec", level: "must" }],
+      [{ code: "name-invalid-format", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 名前がハイフンで始まるときname-invalid-formatを報告する",
+      { ...VALID, name: "-sample" },
+      [{ code: "name-invalid-format", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 名前がハイフンで終わるときname-invalid-formatを報告する",
+      { ...VALID, name: "sample-" },
+      [{ code: "name-invalid-format", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 名前の先頭と末尾がともにハイフンのときname-invalid-formatを報告する",
+      { ...VALID, name: "-sample-" },
+      [{ code: "name-invalid-format", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 名前にハイフンが2つ連続するときname-invalid-formatを報告する",
+      { ...VALID, name: "sample--skill" },
+      [{ code: "name-invalid-format", source: "spec", level: "must" }],
+    ],
+    [
+      "[negative] 名前にハイフンが3つ連続するときname-invalid-formatを報告する",
+      { ...VALID, name: "sample---skill" },
+      [{ code: "name-invalid-format", source: "spec", level: "must" }],
     ],
     [
       "[negative] 説明が空文字列のときdescription-not-stringを報告する",

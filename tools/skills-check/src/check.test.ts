@@ -56,7 +56,7 @@ describe("checkSkill", () => {
 
   test("[negative] 複数のルールの結果をまとめて返す", () => {
     // Given
-    const content = `---\nname: other--name\ndescription: ${VALID_DESCRIPTION}\nextra: 1\n---\n\n本文\n`;
+    const content = `---\nname: other-name\ndescription: ${VALID_DESCRIPTION}\nextra: 1\n---\n\n本文\n`;
     const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": content });
 
     // When
@@ -65,7 +65,6 @@ describe("checkSkill", () => {
     // Then
     expect(problems.map((problem) => problem.code).sort()).toEqual([
       "extra-fields",
-      "name-consecutive-hyphens",
       "name-dir-mismatch",
     ]);
   });

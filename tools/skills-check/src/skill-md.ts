@@ -28,13 +28,12 @@ const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
  * `name`に使える文字について、仕様は英小文字・数字に加えてハイフンを許すが、
  * 英小文字・数字の範囲を「unicode lowercase alphanumeric characters (`a-z`, `0-9`)」と書いており、
  * Unicode全体を許す読みと`a-z0-9`に限る読みの双方を含む。通す範囲が狭い後者を採る。
- * ハイフンの位置はここでは問わない。先頭と末尾のハイフンは`name-hyphen-boundary`、
- * 連続するハイフンは`name-consecutive-hyphens`が、違反ごとに異なるメッセージを出すため個別に検出する。
+ * 文字種に加え、先頭と末尾がハイフンでないこと・ハイフンが連続しないことも同じパターンで表す。
  *
  * 仕様は列挙外のフィールドを禁じていないため、未知のキーは許す（`extra-fields`が別途報告する）。
  */
 export const FrontmatterSchema = type({
-  name: `0 < string <= ${MAX_NAME_LENGTH} & /^[a-z0-9-]+$/`,
+  name: `0 < string <= ${MAX_NAME_LENGTH} & /^[a-z0-9]+(?:-[a-z0-9]+)*$/`,
   description: `0 < string <= ${MAX_DESCRIPTION_LENGTH} & /\\S/`,
   "license?": "string",
   "compatibility?": `string <= ${MAX_COMPATIBILITY_LENGTH}`,
@@ -55,8 +54,8 @@ const VIOLATION_BY_FIELD: Record<string, Partial<Record<string, Finding>>> = {
       `\`name\`を${MAX_NAME_LENGTH}文字以内にしてください。`,
     ),
     pattern: specViolation(
-      "name-invalid-chars",
-      "`name`に使えるのは英小文字・数字・ハイフンのみです。",
+      "name-invalid-format",
+      "`name`フィールドは英小文字・数字・連続しないハイフンのみが使用可能です。ハイフンを先頭と末尾に使用することはできません。",
     ),
   },
   description: {
@@ -126,11 +125,8 @@ export const checkFrontmatterSchema = (frontmatter: Record<string, unknown>): Fi
     }
   }
 
-  // 値が空のときは文字種や長さも同時に外れる。空であることだけを報告すれば足りる。
-  if (byCode.has("name-not-string")) {
-    byCode.delete("name-invalid-chars");
-    byCode.delete("name-too-long");
-  }
+  // 値が空のときは空であることだけを報告する。
+  if (byCode.has("name-not-string")) byCode.delete("name-invalid-format");
   if (byCode.has("description-not-string")) byCode.delete("description-too-long");
 
   return [...byCode.values()];
