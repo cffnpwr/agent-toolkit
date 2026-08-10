@@ -4,7 +4,9 @@ import { encode } from "gpt-tokenizer/model/gpt-4o";
 
 import { skillOf } from "../test-fixtures.ts";
 
-import { bodyTokenCountRule, RECOMMENDED_MAX_TOKENS } from "./body-token-count.ts";
+import { bodyTokenCountRule } from "./body-token-count.ts";
+
+const RECOMMENDED_MAX_TOKENS = 5000;
 
 describe("bodyTokenCountRule", () => {
   test("[positive] 推奨トークン数に収まるとき問題を報告しない", () => {
@@ -24,7 +26,6 @@ describe("bodyTokenCountRule", () => {
 
     // Then: 概算トークン数をメッセージに含めて報告する
     expect(findings).toMatchObject([{ code: "body-too-many-tokens", source: "spec", level: "should" }]);
-    // 本番コードと同じトークナイザで概算値を求める
     expect(findings[0]?.message).toContain(String(encode(content).length));
   });
 });

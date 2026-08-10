@@ -1,9 +1,7 @@
 import type { Rule } from "../types.ts";
 
-/** 仕様が推奨する`SKILL.md`の行数上限。 */
-export const RECOMMENDED_MAX_LINES = 500;
+const RECOMMENDED_MAX_LINES = 500;
 
-/** `SKILL.md`が推奨の行数に収まることを確かめる。 */
 export const bodyLineCountRule: Rule = (skill) => {
   const lines = skill.content.split("\n").length;
   if (lines <= RECOMMENDED_MAX_LINES) return [];

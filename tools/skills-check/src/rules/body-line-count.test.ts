@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 
 import { skillOf } from "../test-fixtures.ts";
 
-import { bodyLineCountRule, RECOMMENDED_MAX_LINES } from "./body-line-count.ts";
+import { bodyLineCountRule } from "./body-line-count.ts";
+
+const RECOMMENDED_MAX_LINES = 500;
 
 describe("bodyLineCountRule", () => {
   test.each([
