@@ -1,0 +1,27 @@
+{
+  "name": "skills-check",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "bun run src/main.ts --root ../../.apm/skills",
+    "lint": "eslint . --max-warnings=0",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cffnpwr/result-ts": "1.1.1",
+    "arktype": "2.2.3",
+    "gpt-tokenizer": "3.4.0",
+    "yaml": "2.9.0"
+  },
+  "devDependencies": {
+    "@cffnpwr/eslint-config": "2.0.1",
+    "@cffnpwr/tsconfig": "1.0.0",
+    "@types/bun": "1.3.14",
+    "@typescript-eslint/parser": "8.66.0",
+    "eslint": "10.8.0",
+    "globals": "17.9.0",
+    "jiti": "2.7.0",
+    "typescript": "6.0.3"
+  }
+}
