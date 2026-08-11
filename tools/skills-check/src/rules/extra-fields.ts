@@ -1,18 +1,11 @@
 import type { Rule } from "../types.ts";
 
-/** Agent Skills仕様が定めるフロントマターフィールド。 */
-export const SPEC_FIELDS: readonly string[] = [
-  "name",
-  "description",
-  "license",
-  "allowed-tools",
-  "metadata",
-  "compatibility",
-];
+import { declaredSchema } from "../skill-md.ts";
+
+/** `declaredSchema`はインデックスシグネチャを持たないため、`props`は宣言済みキーだけを返す。 */
+export const SPEC_FIELDS: readonly string[] = declaredSchema.props.map((prop) => prop.key);
 
 /**
- * 仕様が定めていないフィールドの有無を確かめる。
- *
  * 仕様外フィールドの扱いは処理系ごとに異なる。拒否することが確認できているのは、
  * claude.aiへのアップロード・Skills API・anthropics/skillsの
  * skills/skill-creator/scripts/package_skill.pyの3経路

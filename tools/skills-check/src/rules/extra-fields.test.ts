@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { skillOf, VALID_DESCRIPTION } from "../test-fixtures.ts";
 
-import { extraFieldsRule, SPEC_FIELDS } from "./extra-fields.ts";
+import { extraFieldsRule } from "./extra-fields.ts";
 
 const BASE = { name: "sample-skill", description: VALID_DESCRIPTION };
 
@@ -16,8 +16,15 @@ describe("extraFieldsRule", () => {
   });
 
   test("[positive] 仕様が定めるフィールドをすべて備えているとき問題を報告しない", () => {
-    // Given
-    const frontmatter = Object.fromEntries(SPEC_FIELDS.map((field) => [field, "value"]));
+    // Given: 仕様が定める6フィールド（name・description・license・compatibility・metadata・allowed-tools）をすべて持つ
+    const frontmatter = {
+      name: "sample-skill",
+      description: VALID_DESCRIPTION,
+      license: "MIT",
+      compatibility: "Requires git",
+      metadata: { author: "example" },
+      "allowed-tools": "Read Grep",
+    };
 
     // When
     const findings = extraFieldsRule(skillOf({ frontmatter }));

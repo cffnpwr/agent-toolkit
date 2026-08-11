@@ -38,7 +38,7 @@ describe("checkSkill", () => {
 
     // Then
     expect(problems).toMatchObject([
-      { skill: "sample-skill", code: "missing-skill-md", source: "spec", level: "must" },
+      { skillName: "sample-skill", code: "missing-skill-md", source: "spec", level: "must" },
     ]);
   });
 
@@ -52,6 +52,20 @@ describe("checkSkill", () => {
 
     // Then: extra-fields は後続のルールなので報告されない
     expect(problems.map((problem) => problem.code)).toEqual(["name-missing"]);
+  });
+
+  test("[negative] スキーマ違反があるとき指摘なしで検査から外れない", () => {
+    // Given: license が文字列でない場合
+    const content = `---\nname: probe-skill\ndescription: ${VALID_DESCRIPTION}\nlicense: 123\ndisable-model-invocation: true\n---\n\n本文。\n`;
+    const dir = workspace.makeSkillDir("probe-skill", { "SKILL.md": content });
+
+    // When
+    const problems = checkSkill(dir);
+
+    // Then: licenseのスキーマ違反が検出される
+    expect(problems).toMatchObject([
+      { skillName: "probe-skill", code: "license-not-string", source: "spec", level: "must" },
+    ]);
   });
 
   test("[negative] 複数のルールの結果をまとめて返す", () => {
@@ -77,7 +91,7 @@ describe("checkSkill", () => {
     const problems = checkSkill(dir);
 
     // Then
-    expect(problems.every((problem) => problem.skill === "sample-skill")).toBe(true);
+    expect(problems.every((problem) => problem.skillName === "sample-skill")).toBe(true);
   });
 });
 
@@ -92,7 +106,7 @@ describe("checkSkillsRoot", () => {
     const problems = checkSkillsRoot(workspace.root);
 
     // Then
-    expect(problems.map((problem) => [problem.skill, problem.code])).toEqual([
+    expect(problems.map((problem) => [problem.skillName, problem.code])).toEqual([
       ["broken-skill", "name-dir-mismatch"],
     ]);
   });

@@ -2,15 +2,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { stringify as stringifyYaml } from "yaml";
+
 import type { Skill } from "./types.ts";
 
-/** テストで使う妥当な`description`。 */
 export const VALID_DESCRIPTION = "何をするスキルで、いつ使うかを述べる説明。";
 
-/**
- * ファイルを持たないスキルを組み立てる。
- * ファイルシステムを見ないルールの検査に使う。
- */
+/** ファイルシステムを見ないルールの検査に使う。 */
 export const skillOf = (overrides: Partial<Skill> = {}): Skill => ({
   name: "sample-skill",
   dir: "/nowhere/sample-skill",
@@ -20,22 +18,23 @@ export const skillOf = (overrides: Partial<Skill> = {}): Skill => ({
   ...overrides,
 });
 
-/** フロントマターを組み立てて`SKILL.md`の内容にする。 */
-export const skillMdOf = (name: string, body = "本文\n"): string => `---\nname: ${name}\ndescription: ${VALID_DESCRIPTION}\n---\n\n${body}`;
+/**
+ * 値をYAMLの文字列に直接書き下す代わりに`yaml`パッケージでシリアライズし、
+ * `parseFrontmatter`が読む形（パース結果）と対応させる。
+ */
+export const frontmatterYamlOf = (fields: Record<string, unknown>, body = "本文\n"): string => `---\n${stringifyYaml(fields)}---\n\n${body}`;
 
-/** テストごとに使い捨てるディレクトリ。 */
+export const skillMdOf = (name: string, body = "本文\n"): string => frontmatterYamlOf({ name, description: VALID_DESCRIPTION }, body);
+
 export type TempWorkspace = {
-  /** ディレクトリの絶対パス。 */
+  /** 使い捨てディレクトリの絶対パス。 */
   readonly root: string;
-  /** スキルディレクトリを作り、その絶対パスを返す。 */
+  /** 作ったスキルディレクトリの絶対パスを返す。 */
   readonly makeSkillDir: (name: string, files: Record<string, string>) => string;
-  /** ルールへ渡せる形のスキルを作る。 */
   readonly makeSkill: (name: string, files: Record<string, string>) => Skill;
-  /** 後始末をする。 */
   readonly cleanup: () => void;
 };
 
-/** 使い捨てのディレクトリを用意する。 */
 export const createTempWorkspace = (): TempWorkspace => {
   const root = mkdtempSync(join(tmpdir(), "skills-check-"));
 

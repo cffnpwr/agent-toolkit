@@ -1,23 +1,17 @@
-/**
- * skills-check のコマンドラインインターフェース。
- *
- * データはstdout、診断はstderrへ出す。終了コードは失敗種別で分ける。
- *   0: error なし（warning のみの場合を含む）
- *   1: error あり、または --warnings-as-errors 指定時に warning あり
- *   2: 使い方の誤り
- */
-
 import { existsSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import type { Problem } from "./types.ts";
+import type { Level, Problem } from "./types.ts";
 
 import { checkSkill, checkSkillsRoot } from "./check.ts";
-import { severityOf } from "./types.ts";
 
 const EXIT_OK = 0;
 const EXIT_PROBLEMS = 1;
 const EXIT_USAGE = 2;
+
+type Severity = "error" | "warning";
+
+const severityOf = (level: Level): Severity => (level === "must" ? "error" : "warning");
 
 const USAGE = `使い方: skills-check [オプション] <path>...
 
@@ -29,7 +23,7 @@ const USAGE = `使い方: skills-check [オプション] <path>...
 const renderText = (problems: readonly Problem[]): string => problems
   .map((problem) => `${severityOf(problem.level).toUpperCase()} `
     + `[${problem.source}/${problem.code}] `
-    + `${problem.skill}: ${problem.message}`)
+    + `${problem.skillName}: ${problem.message}`)
   .join("\n");
 
 const renderJson = (problems: readonly Problem[]): string => JSON.stringify(
