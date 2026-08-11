@@ -6,7 +6,7 @@ Step 4（独立検証）・Step 6（統合）・Step 7（cleanup）の具体手�
 
 ### 前提: snapshotとworkspaceの関係
 
-- jjは実行時、**cwdが属するworkspaceの作業コピーだけ**をsnapshotする。子は変更系のVCS操作をせず読み取りも`--ignore-working-copy`付きのため、taskワークスペースの変更を作業コミット（`<タスクID>@`）へ取り込むには、親がtaskワークスペース内をcwdにしてjjコマンドを実行する必要がある。これを行うまで`<タスクID>@`は空のままである。
+- jjは実行時、**cwdが属するworkspaceの作業コピーだけ**をsnapshotする。作業コミット（`<タスクID>@`）が反映しているのは子が最後にjjを実行した時点までで、子が一度も実行していなければ空のままである。差分を見る前に、親がtaskワークスペース内をcwdにしてjjコマンドを実行し、その時点の変更をすべて取り込む。
 - rebaseで書き換わってもchange idは安定なので、コミットの参照にはchange idを使う。
 
 対話承認（コミット署名等）が必要な環境では、次のように運用する。
@@ -16,7 +16,7 @@ Step 4（独立検証）・Step 6（統合）・Step 7（cleanup）の具体手�
 
 ### Step 4: 独立検証
 
-まずtaskワークスペース内でsnapshotし、子の変更を`<タスクID>@`へ取り込む。
+まずtaskワークスペース内でsnapshotし、子の変更をすべて`<タスクID>@`へ取り込む。
 
 ```sh
 cd .tmp/agent-workspaces/<タスクID> && jj st
