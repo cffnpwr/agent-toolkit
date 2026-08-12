@@ -10,6 +10,6 @@ export const nameDirectoryMatchRule: Rule = (skill) => {
     code: "name-dir-mismatch",
     source: "spec",
     level: "must",
-    message: `\`name\`をディレクトリ名と同じにしてください（ディレクトリ名は\`${skill.name}\`、\`name\`は\`${name}\`）。`,
+    message: `\`name\`はディレクトリ名と同じである必要があります（ディレクトリ名は\`${skill.name}\`、\`name\`は\`${name}\`）。`,
   }];
 };

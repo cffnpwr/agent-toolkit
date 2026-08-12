@@ -13,6 +13,6 @@ export const bodyTokenCountRule: Rule = (skill) => {
     code: "body-too-many-tokens",
     source: "spec",
     level: "should",
-    message: `SKILL.mdを推奨の${RECOMMENDED_MAX_TOKENS}トークン以内にしてください（概算${tokens}トークン）。`,
+    message: `SKILL.mdは${RECOMMENDED_MAX_TOKENS}トークン以内に収めることが推奨されます（概算${tokens}トークン）。`,
   }];
 };

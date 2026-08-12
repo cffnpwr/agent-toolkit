@@ -62,7 +62,7 @@ const VIOLATION_BY_FIELD: Record<FrontmatterField, Partial<Record<string, Findin
     ),
     pattern: specViolation(
       "name-invalid-format",
-      "`name`フィールドは英小文字・数字・連続しないハイフンのみが使用可能です。ハイフンを先頭と末尾に使用することはできません。",
+      "`name`フィールドは英小文字・数字・連続しないハイフンのみで構成される必要があります。ハイフンを先頭と末尾に使用することはできません。",
     ),
   },
   description: {
@@ -98,7 +98,7 @@ const VIOLATION_BY_FIELD: Record<FrontmatterField, Partial<Record<string, Findin
     domain: specViolation("license-not-string", "`license`フィールドが文字列ではありません。"),
   },
   "allowed-tools": {
-    domain: specViolation("allowed-tools-not-string", "`allowed-tools`フィールドは空白区切りの文字列のみが使用可能です。"),
+    domain: specViolation("allowed-tools-not-string", "`allowed-tools`フィールドは空白区切りの文字列である必要があります。"),
   },
 };
 

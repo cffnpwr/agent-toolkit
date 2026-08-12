@@ -32,7 +32,7 @@ const violation = (detail: string): Finding => ({
   code: "reference-too-deep",
   source: "spec",
   level: "should",
-  message: `参照が2階層になっています: ${detail}。SKILL.mdから直接参照してください。`,
+  message: `参照が2階層になっています: ${detail}。SKILL.mdから直接参照することが推奨されます。`,
 });
 
 /**
