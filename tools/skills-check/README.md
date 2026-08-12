@@ -6,11 +6,11 @@
 
 bun 1.2以上が必要です。
 
+## 使い方
+
 ```sh
 bun install --frozen-lockfile
 ```
-
-## 使い方
 
 ```sh
 bun run check                          # .apm/skills 配下の全スキルを検査します
@@ -18,7 +18,7 @@ bun run src/main.ts <skill-dir>...     # スキルを個別に検査します
 bun run src/main.ts --root <dir>...    # ディレクトリ直下の各スキルを検査します
 ```
 
-オプションを次に示します。
+### オプション
 
 | オプション | 内容 |
 | --- | --- |
@@ -26,7 +26,7 @@ bun run src/main.ts --root <dir>...    # ディレクトリ直下の各スキル
 | `--json` | 結果をJSONで出します |
 | `--warnings-as-errors` | warningも失敗として扱います |
 
-終了コードは次のとおりです。
+### 終了コード
 
 | コード | 意味 |
 | --- | --- |
@@ -36,25 +36,30 @@ bun run src/main.ts --root <dir>...    # ディレクトリ直下の各スキル
 
 ## 検査項目
 
-### 仕様が定める条件
+検査ルールは`source`（出自: `spec`・`repo`）と`level`（規範の強さ: `must`・`should`）という、
+独立した2つの軸を持ちます（参照: [スキルの静的検証](../../docs/design-doc/skills-check.md)）。
 
-[Agent Skills仕様](https://agentskills.io/specification)の[フロントマター](https://agentskills.io/specification#frontmatter)が必須と定める条件をerrorとして、
-[段階的開示](https://agentskills.io/specification#progressive-disclosure)と[ファイル参照](https://agentskills.io/specification#file-references)の推奨事項をwarningとして検査します。
+### 仕様が定める必須条件（`source: spec` / `level: must`）
 
-仕様の記述が一意に定まらない箇所は、通す範囲が狭い側の解釈を採ります。
-根拠は[スキルの静的検証](../../docs/design-doc/skills-check.md)に記しています。
+検査対象のパスがディレクトリであること、その直下に`SKILL.md`が存在することを検査します。
+[Agent Skills仕様](https://agentskills.io/specification)の[フロントマター](https://agentskills.io/specification#frontmatter)が必須と定める条件と、
+`name`とディレクトリ名の一致も検査します。
 
-トークン数の検査は近似です。
-Claude 3以降のローカルトークナイザが提供されていないためです。
+仕様の記述が一意に定まらない箇所は、通す範囲が狭い側の解釈を採ります（参照: [スキルの静的検証](../../docs/design-doc/skills-check.md)）。
 
-### リポジトリ規約（error）
+### 仕様の推奨事項（`source: spec` / `level: should`）
 
-`compatibility`フィールドと本文の`## Requirements`節が、両方そろっているか、どちらも無いことを検査します（[スキル機構](../../docs/design-doc/skills.md)の依存宣言）。
+[段階的開示](https://agentskills.io/specification#progressive-disclosure)（本文の行数・トークン数）と、
+[ファイル参照](https://agentskills.io/specification#file-references)（参照の階層）の推奨事項を検査します。
 
-### 移植性（warning）
+トークン数の検査は近似です（参照: [ADR 0006](../../docs/adr/0006-tokenizer.md)）。
 
-仕様が定める6つのフィールド以外の存在を検査します。
-Claude Codeは受け付けますが、次の3経路では拒否されます。
+### 仕様外フィールド（`source: spec` / `level: should`）
+
+仕様が定める6つのフィールド（`name`・`description`・`license`・`compatibility`・`metadata`・`allowed-tools`）
+以外のフィールドの存在を検査します。
+
+仕様外フィールドの扱いは実装ごとに異なり、次の3経路では拒否されます。
 
 - claude.aiへのアップロード
 - Skills API
@@ -64,6 +69,6 @@ Claude Codeは受け付けますが、次の3経路では拒否されます。
 
 - [Claude Codeのフロントマター仕様](https://code.claude.com/docs/en/skills#using-skill-frontmatter-outside-claude-code)
 
-## 設計の根拠
+### 本リポジトリの追加規約（`source: repo` / `level: must`）
 
-仕様解釈・YAMLパーサの選定・トークン数の近似については[スキルの静的検証](../../docs/design-doc/skills-check.md)に記しています。
+`compatibility`フィールドと本文の`## Requirements`節が、両方そろっているか、どちらも無いことを検査します（参照: [skill-creatorスキル](../../.apm/skills/skill-creator/SKILL.md)）。
