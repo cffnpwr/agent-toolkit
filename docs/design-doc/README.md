@@ -1,28 +1,28 @@
 # agent-toolkit Design Doc
 
-AI Agent向けのスキルとhookを、Harness非依存に宣言し、ホスト環境で再現的に動かすためのパッケージの設計。
+AI Agent向けのprimitiveを宣言し、複数のharnessへ配布するAPMパッケージの設計。
+primitiveは[APMが配布する最小単位](https://microsoft.github.io/apm/concepts/glossary/#primitive)で、
+種別にskills・hooks・instructions・prompts・agents・commands・MCP serversがある。
+harnessは[primitiveを実行するagent runtime](https://microsoft.github.io/apm/concepts/glossary/#harness)。
 
 ## スコープと非スコープ
 
 ### スコープ
 
-- スキルとhookのディレクトリ構成・配布の仕組み
-- 外部ランタイム依存の宣言と供給方式
-- 複数Harnessにまたがる動作の設計
-- スキル・hookの追加と検証の流れ
+- primitiveのディレクトリ構成と配布の仕組み
+- 外部依存の宣言と供給の方針
+- hookの設計上の規約
 
 ### 非スコープ
 
 - 個々のスキル・hookが扱うドメイン知識の内容
-- Harness本体・APM本体の実装
+- スキルの内部構成と作成手順(skill-creatorスキルが定める)
+- harness本体・APM本体の実装
 
 ## 目次
 
 | ドキュメント | 内容 |
 | --- | --- |
 | [設計原則](./principles.md) | 全体を通しての原則 |
-| [全体アーキテクチャ](./architecture.md) | リポジトリ構成、APM配布、Harnessとモデルの区別 |
-| [スキル機構](./skills.md) | スキルの構成、依存宣言、段階的開示、スクリプト設計 |
-| [Hook機構](./hooks.md) | hookの配置規約とHarness非依存の設計 |
-| [外部ランタイム依存](./dependencies.md) | 依存の宣言・供給・検証の方針 |
-| [運用](./operations.md) | スキル・hookの追加、検証、配布 |
+| [全体アーキテクチャ](./architecture.md) | リポジトリ構成、配布の仕組み |
+| [Hook機構](./hooks.md) | hookの配置、入出力、発火イベント、依存の扱い |

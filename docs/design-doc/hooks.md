@@ -1,80 +1,63 @@
 # Hook機構
 
-hookは、Harnessのツール実行に介入してルールを適用する成果物。
+hookは、[harnessのライフサイクルイベントで実行されるprimitive](https://microsoft.github.io/apm/concepts/glossary/#hook)。
 `.apm/hooks/`に置き、個別hookの実装はこの方針に従う。
 
-## 配置規約
+## 配置
 
-- `.apm/hooks/*.json`（直下のみ）がhookマニフェスト、`scripts/<hook名>/`がその実装。スクリプト本体は`scripts/<hook名>/src/`にまとめ、依存宣言・設定ファイルはその直下（`scripts/<hook名>/`）に置く。
-- 各hookは`scripts/<hook名>/`内で自己完結させる。依存宣言（定義ファイル・ロックファイル）・開発ツーリング（`tsconfig.json`・lint設定等）はhook自身のディレクトリに置き、hook間で共有しない。これにより、hookの追加が既存hookの依存宣言と競合しない。
-- マニフェストはネストしたサブディレクトリでは探索されない（APMの探索は`.apm/hooks/`直下の`glob("*.json")`非再帰。詳細は[全体アーキテクチャ](./architecture.md)を参照）。
-  そのため`scripts/<hook名>/`配下の開発ツーリング（`package.json`・`tsconfig.json`等）はマニフェストとして誤検知されない。
+```text
+.apm/hooks/
+├─ <hook名>.json    # hook定義ファイル
+└─ scripts/         # 実装
+```
 
-## Harness非依存を前提に設計する
+- APMはhook定義ファイルを`.apm/hooks/`直下の`glob("*.json")`で探索する([plugin_exporter.py](https://github.com/microsoft/apm/blob/main/src/apm_cli/bundle/plugin_exporter.py)・[validation.py](https://github.com/microsoft/apm/blob/main/src/apm_cli/models/validation.py))。
+  サブディレクトリは対象外のため、`scripts/`配下の`package.json`・`tsconfig.json`等がhook定義ファイルとして誤検知されることはない。
+- hook定義ファイルが指定するイベント名は、APMがターゲットごとに変換する(`PreToolUse`はGemini CLIでは`BeforeTool`)([hook_integrator.py](https://github.com/microsoft/apm/blob/main/src/apm_cli/integration/hook_integrator.py))。
+- hookを受け取るharnessは[targets matrix](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/targets-matrix.md)が定める。
+  hookの概念を持たないOpenCodeはskipされる。
 
-hookは複数のHarnessへデプロイされる（対応ターゲットは[全体アーキテクチャ](./architecture.md)、方針は[設計原則](./principles.md)）。
-特定Harness専用の制御手段（Harness固有のJSON出力プロトコル等）に依存せず、対応する全Harnessで成立する手段へ一本化する。
+## 入力と出力
 
-### 入力の抽出
+### 入力
 
-- hookが必要とする情報（コマンド文字列等）は、各Harnessのhook入力フィールドから取り出す。
-  フィールド名・構造はHarnessごとに異なるため、対応するHarnessの公式仕様・実装で確認したうえで列挙する。
-- 入力を抽出できないHarnessでは無作用（exit 0）へ劣化する設計とし、誤判定で操作を阻害しない。
-- どのHarnessに対応し、どれを対象外とするかは、確認できたフィールドの有無で決める。未文書化のフィールドを推測で使わない。
+- hookが必要とする情報(コマンド文字列等)は、各harnessのhook入力フィールドから取り出す。
+  フィールド名・構造はharnessごとに異なるため、対応するharnessの公式仕様・実装を確認してから列挙する。
+- 入力を抽出できないharnessでは無作用(exit 0)へ劣化する設計とし、誤判定で操作を阻害しない。
+- どのharnessに対応し、どれを対象外とするかは、確認できたフィールドの有無で決める。
+  未文書化のフィールドを推測で使わない。
 
-### 出力プロトコル
+### 出力
 
-- 効果は移植性の高い終了コードへ一本化する。Harness固有のJSON制御には頼らない。
-- 終了コードの意味と各Harnessでの実挙動は、各Harnessの公式hook仕様・実装で確認する（記憶や推測で断定しない）。
-- AI Agentへ渡すフィードバック・警告は簡単な英語で出力する。
-
-一本化の例を次に示す。
+効果は終了コードとstderrへ一本化する。
+harness固有のJSON出力プロトコルには頼らない([ADR 0002](../adr/0002-hook-exit-code-protocol.md))。
 
 | 状況 | 出力 | 意味 |
 | --- | --- | --- |
 | 違反・ブロック | exit 2 + stderr | 違反内容をAgentにフィードバックさせる |
-| 実行不可（fail-open） | exit 1 + stderr | 非ブロックの警告として通す |
+| 実行不可(fail-open) | exit 1 + stderr | 非ブロックの警告として通す |
 | 通過・対象外 | exit 0・無出力 | 何もしない |
 
-## 介入点は目的に応じて選ぶ
+終了コードの意味と各harnessでの実挙動は、各harnessの公式hook仕様・実装で確認する(記憶や推測で断定しない)。
+AI Agentへ渡すフィードバック・警告は簡単な英語で出力する。
 
-介入点は、hookの目的が操作結果の「検証」か操作自体の「抑止」かで選ぶ。
+## 発火イベントの選択
 
-### 検証が目的なら適用後の実状態を読む（PostToolUse）
+- 操作を止めることが目的なら、操作が適用される前のイベントを選ぶ。
+  適用後では変更が済んでおり間に合わない。
+  適用前は実状態を読めないため入力を解析して対象を判定することになり、誤判定で正当な操作を阻害しないよう、対象と確信できるときだけ作用させる。
+- 操作結果の検証が目的なら、適用後のイベントを選び、結果を一次ソースとして読み直す。
+  入力から意図を再構成する場合と違い、入力の渡し方(引数・標準入力・変数展開等)に左右されない。
+  結果の読み取りが実行形態に妨げられる場合は、適用前に入力から判定する。
+- 選べるイベントと発火の条件は各harnessの公式hookドキュメント、hook定義ファイルのイベント名との対応は[hook_integrator.py](https://github.com/microsoft/apm/blob/main/src/apm_cli/integration/hook_integrator.py)を参照する。
 
-- コマンド文字列から操作の意図を再構成せず、操作の適用後の実状態を読む。
-  入力の渡し方の違い（引数・標準入力・変数展開等）に左右されず頑健になる。
-- そのため介入点は操作成功後（PostToolUse）とし、結果を一次ソースとして読み直す。
+## 依存の扱い
 
-### 抑止が目的なら実行前にコマンドを解析する（PreToolUse）
-
-- 操作がリポジトリを変更する前に止めることが目的なら、PostToolUseでは変更が済んでおり間に合わない。介入点は実行前（PreToolUse）とする。
-- 実行前は実状態を読めないため、コマンド文字列を解析して対象操作を判定する。
-  誤判定で正当な操作を阻害しないよう、対象と確信できるときだけ作用させ、曖昧なときは通す（fail-open）。
-
-## fail-openを既定とする
-
-外部ツール不在・依存パッケージの同期失敗・設定取得失敗等の実行不可は、進行を停止させず警告して通す（fail-open）。
-
-- 依存の導入・代替手段へのフォールバックはhookが行わず、ユーザーへ委ねる。
-- これは[設計原則](./principles.md)の「再現的な操作のみ自律実行する」（依存の追加・導入・フォールバックは停止・エスカレーション）と整合する。
-  hookは非対話で動くため、停止の代わりに警告して通す形をとる。
-- 依存宣言の規約は[外部ランタイム依存](./dependencies.md)で定める。
-
-## 外部依存を最小化する
-
-- 外部コマンド呼び出しは必要最小限にとどめる。
-  設定・データの取得は実行環境の組み込み機能を優先し、追加CLIに依存しない。
-- ネットワーク取得はTTL付きでローカルにキャッシュし、取得失敗時は期限切れキャッシュへフォールバックする。
-- 無認証取得を使う場合、取得元は公開リソースである必要がある。
-
-## 起動スクリプトで事前フィルタする
-
-- 重いランタイムの起動前に、shellで安価に対象外の入力を除外する。
-- 起動スクリプトで外部ツールの存在確認を行い、不在時はfail-open警告を出して通す。
-- 同梱した依存パッケージは、起動スクリプトがロックファイルから同期してから本体を起動する。発火ごとにfrozen同期し（同期済みなら確認のみで安価。ファイル存在に基づく偽陰性を避ける）、同期失敗時はfail-open警告を出して通す（[外部ランタイム依存](./dependencies.md)）。
-
-## 構成と検証
-
-- 責務ごとにモジュールを分割する。
-- テスト可能なロジックには単体テストを置く。
+- hookの外部依存は、当該hookのREADME(`.apm/hooks/scripts/<hook名>/README.md`)の`## Requirements`節に記載する([設計原則](./principles.md))。
+- 依存パッケージは、それを読み込むディレクトリが自身の定義ファイル・ロックファイルで宣言する。
+- 起動スクリプトは、本体を起動する前に、shellで対象外の入力を除外する。
+- 起動スクリプトが外部ツールの存在確認を行い、不在時はfail-open警告を出して通す。
+- 同梱した依存パッケージは、起動スクリプトがロックファイルから同期してから本体を起動する。
+  発火ごとにロックファイルどおりの同期を実行し(同期済みなら確認のみで安価に済み、ファイルの存在に基づく判定の偽陰性を避ける)、同期失敗時はfail-open警告を出して通す。
+- 依存の導入・代替手段へのフォールバックはhookが行わず、ユーザーへ委ねる([ADR 0003](../adr/0003-no-external-tool-install.md))。
+  hookは非対話で発火するため、進行の停止に代えて警告して通す。
