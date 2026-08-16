@@ -9,8 +9,8 @@
   },
   "dependencies": {
     "@cffnpwr/commitlint-config": "1.0.1",
-    "@commitlint/lint": "21.2.0",
-    "@commitlint/load": "21.2.0",
+    "@commitlint/lint": "21.2.2",
+    "@commitlint/load": "21.2.2",
     "unbash": "4.0.10"
   },
   "devDependencies": {
