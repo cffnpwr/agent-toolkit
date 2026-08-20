@@ -6,13 +6,13 @@
 パッケージは[`apm.yml`を持つディレクトリ](https://microsoft.github.io/apm/concepts/glossary/#package)。
 primitiveはAPMが配布する最小単位で、種別にはinstructions・skills・prompts・agents・hooks・commands・MCP serversがある。
 
-primitiveは`.apm/`配下に種別ごとのディレクトリで置く。
-ドキュメント・ライセンスなど配布対象外のファイルはリポジトリ直下と`docs/`に置く。
+primitiveは配布対象として`.apm/`配下に種別ごとのディレクトリで置く。
 
 ```text
 .
 ├─ apm.yml              # パッケージのメタ情報
 ├─ docs/                # ドキュメント
+├─ tools/               # 開発ツール
 └─ .apm/
    ├─ skills/           # <スキル名>/SKILL.md + 同梱リソース
    └─ hooks/            # <hook名>.json + scripts/<hook名>/

@@ -16,3 +16,17 @@ uv sync --frozen --no-dev
 ```sh
 uv run python scripts/quick_validate.py ../<スキル名>/
 ```
+
+Agent Skills仕様と本リポジトリの規約への適合は、`tools/skills-check`で検査する。
+
+```sh
+cd ../../../tools/skills-check
+```
+
+```sh
+bun install --frozen-lockfile
+```
+
+```sh
+bun run src/main.ts ../../.apm/skills/<スキル名>
+```
