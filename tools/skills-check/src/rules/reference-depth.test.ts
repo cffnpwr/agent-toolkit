@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe("referencedDocumentPaths", () => {
-  test("[positive] スキル内の実在するMarkdownを絶対パスで返す", () => {
+  test("[positive] SKILL.mdが実在するMarkdownへのリンクを含むとき、そのファイルの絶対パスを返す", () => {
     // Given
     const skill = workspace.makeSkill("sample-skill", {
       "SKILL.md": "詳細は [手順](references/guide.md) を読む。\n",
@@ -33,7 +33,7 @@ describe("referencedDocumentPaths", () => {
     expect(paths).toEqual([join(skill.dir, "references/guide.md")]);
   });
 
-  test("[positive] アンカーを落として同じ宛先をまとめる", () => {
+  test("[positive] アンカー付きリンクと同じファイルへの通常リンクが両方あるとき、アンカーを落として1件にまとめる", () => {
     // Given
     const skill = workspace.makeSkill("sample-skill", {
       "SKILL.md": "[節](references/guide.md#section) と [全体](references/guide.md)。\n",
@@ -113,7 +113,7 @@ describe("referenceDepthRule", () => {
     expect(findings).toEqual([]);
   });
 
-  test("[negative] 2階層目の参照を報告する", () => {
+  test("[negative] SKILL.mdから2階層先へ辿るリンクの連鎖があるとき、reference-too-deepを報告する", () => {
     // Given
     const skill = workspace.makeSkill("sample-skill", {
       "SKILL.md": "[一](references/a.md)\n",

@@ -16,7 +16,7 @@ export const referencedDocumentPaths = (filePath: string, skillDir: string): str
     if (raw === undefined || isExternal(raw)) continue;
 
     const target = raw.split("#")[0]?.split("?")[0];
-    if (target === undefined || target === "" || !target.endsWith(".md")) continue;
+    if (!target?.endsWith(".md")) continue;
 
     const resolved = resolve(dirname(filePath), target);
     if (relative(skillDir, resolved).startsWith("..")) continue;
@@ -32,7 +32,7 @@ const violation = (detail: string): Finding => ({
   code: "reference-too-deep",
   source: "spec",
   level: "should",
-  message: `参照が2階層になっています: ${detail}。SKILL.mdから直接参照することが推奨されます。`,
+  message: `参照が2階層になっています: ${detail}。\`SKILL.md\`から直接参照することが推奨されます。`,
 });
 
 /**

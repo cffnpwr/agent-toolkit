@@ -11,7 +11,7 @@ export type Source = "repo" | "spec";
 /**
  * 規範の強さ。出自とは独立した軸で、同じ出自の中に両方がある。
  *
- * - `must`: 満たさないものは適合しない
+ * - `must`: 必須。満たさないものは適合しない
  * - `should`: 推奨。満たさなくても適合する
  */
 export type Level = "must" | "should";

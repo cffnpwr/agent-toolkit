@@ -129,7 +129,7 @@ const readFrontmatterYaml = (content: string): Result<Record<string, YamlValue>,
   if (match === null) {
     return Err(specViolation(
       "frontmatter-missing",
-      `SKILL.mdの先頭にフロントマターがありません（${SPEC_URL}）。`,
+      `\`SKILL.md\`の先頭にフロントマターがありません（${SPEC_URL}）。`,
     ));
   }
 

@@ -16,11 +16,11 @@ export type SkillLocation = {
 export const skillNameOf = (inputDir: string): string => {
   const dir = resolve(inputDir);
 
+  // パスの最後のセグメント（ディレクトリ名）をスキル名として使う。
   return dir.split("/").filter(Boolean).at(-1) ?? dir;
 };
 
 export const loadSkillLocation = (inputDir: string): Result<SkillLocation, Finding> => {
-  // 参照の照合で相対パスと絶対パスが混ざらないよう、入口で絶対パスへ寄せる。
   const dir = resolve(inputDir);
 
   if (!existsSync(dir) || !statSync(dir).isDirectory()) {
@@ -28,7 +28,7 @@ export const loadSkillLocation = (inputDir: string): Result<SkillLocation, Findi
       code: "not-a-directory",
       source: "spec",
       level: "must",
-      message: `${dir}はディレクトリではありません。`,
+      message: `\`${dir}\`はディレクトリではありません。`,
     });
   }
 
@@ -38,7 +38,7 @@ export const loadSkillLocation = (inputDir: string): Result<SkillLocation, Findi
       code: "missing-skill-md",
       source: "spec",
       level: "must",
-      message: `${dir}内に\`SKILL.md\`が存在しません。`,
+      message: `\`${dir}\`内に\`SKILL.md\`が存在しません。`,
     });
   }
 

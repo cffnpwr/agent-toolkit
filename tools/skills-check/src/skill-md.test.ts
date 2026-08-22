@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe("parseFrontmatter", () => {
-  test("[positive] 折りたたみスカラーを連結して返す", () => {
+  test("[positive] descriptionがYAMLの折りたたみスカラーで複数行のとき、連結した文字列として返す", () => {
     // Given
     const content = "---\nname: sample-skill\ndescription: >\n  前半の行\n  後半の行\n---\n\n本文\n";
 

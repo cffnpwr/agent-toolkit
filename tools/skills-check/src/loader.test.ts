@@ -45,7 +45,7 @@ describe("loadSkillLocation", () => {
     });
   });
 
-  test("[positive] 相対パスを絶対パスへ寄せる", () => {
+  test("[positive] 相対パスを渡すと絶対パスに解決したdirを返す", () => {
     // Given
     workspace.makeSkillDir("sample-skill", { "SKILL.md": skillMdOf("sample-skill") });
     const previousCwd = process.cwd();

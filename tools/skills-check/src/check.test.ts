@@ -68,7 +68,7 @@ describe("checkSkill", () => {
     ]);
   });
 
-  test("[negative] 複数のルールの結果をまとめて返す", () => {
+  test("[negative] 複数のルールに違反するとき両方のcodeをまとめて返す", () => {
     // Given
     const content = `---\nname: other-name\ndescription: ${VALID_DESCRIPTION}\nextra: 1\n---\n\n本文\n`;
     const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": content });
@@ -83,7 +83,7 @@ describe("checkSkill", () => {
     ]);
   });
 
-  test("[negative] 問題にスキル名を付けて返す", () => {
+  test("[negative] nameがディレクトリ名と異なるスキルを検査するとディレクトリ名をskillNameとして返す", () => {
     // Given
     const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": skillMdOf("other-name") });
 
@@ -96,7 +96,7 @@ describe("checkSkill", () => {
 });
 
 describe("checkSkillsRoot", () => {
-  test("[positive] 配下の各スキルを検査し、ディレクトリ以外を無視する", () => {
+  test("[positive] スキルと非ディレクトリのファイルが混在するとき、ディレクトリ以外を無視し問題のあるスキルだけ返す", () => {
     // Given
     workspace.makeSkillDir("valid-skill", { "SKILL.md": skillMdOf("valid-skill") });
     workspace.makeSkillDir("broken-skill", { "SKILL.md": skillMdOf("mismatched") });

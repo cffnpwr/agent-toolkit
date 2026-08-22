@@ -10,6 +10,6 @@ export const bodyLineCountRule: Rule = (skill) => {
     code: "body-too-many-lines",
     source: "spec",
     level: "should",
-    message: `SKILL.mdは${RECOMMENDED_MAX_LINES}行以内に収めることが推奨されます（現在${lines}行）。`,
+    message: `\`SKILL.md\`は${RECOMMENDED_MAX_LINES}行以内に収めることが推奨されます（現在${lines}行）。`,
   }];
 };

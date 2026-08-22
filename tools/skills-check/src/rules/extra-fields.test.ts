@@ -44,12 +44,12 @@ describe("extraFieldsRule", () => {
     expect(findings[0]?.message).toContain("disable-model-invocation");
   });
 
-  test("[negative] 複数の仕様外フィールドがあるときアルファベット順に整列してメッセージに含める", () => {
+  test("[negative] 複数の仕様外フィールドがあるとき宣言順に列挙してメッセージに含める", () => {
     // Given / When
     const findings = extraFieldsRule(skillOf({ frontmatter: { ...BASE, zeta: 1, alpha: 2 } }));
 
     // Then
     expect(findings).toMatchObject([{ code: "extra-fields", source: "spec", level: "should" }]);
-    expect(findings[0]?.message).toContain("alpha, zeta");
+    expect(findings[0]?.message).toContain("zeta, alpha");
   });
 });
