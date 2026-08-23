@@ -1,0 +1,150 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+import type { TempWorkspace } from "../test-fixtures.ts";
+
+import { createTempWorkspace } from "../test-fixtures.ts";
+
+import { referencedDocumentPaths, referenceDepthRule } from "./reference-depth.ts";
+
+let workspace: TempWorkspace;
+
+beforeEach(() => {
+  workspace = createTempWorkspace();
+});
+
+afterEach(() => {
+  workspace.cleanup();
+});
+
+describe("referencedDocumentPaths", () => {
+  test("[positive] SKILL.mdが実在するMarkdownへのリンクを含むとき、そのファイルの絶対パスを返す", () => {
+    // Given
+    const skill = workspace.makeSkill("sample-skill", {
+      "SKILL.md": "詳細は [手順](references/guide.md) を読む。\n",
+      "references/guide.md": "手順\n",
+    });
+
+    // When
+    const paths = referencedDocumentPaths(skill.skillMdPath, skill.dir);
+
+    // Then
+    expect(paths).toEqual([join(skill.dir, "references/guide.md")]);
+  });
+
+  test("[positive] アンカー付きリンクと同じファイルへの通常リンクが両方あるとき、アンカーを落として1件にまとめる", () => {
+    // Given
+    const skill = workspace.makeSkill("sample-skill", {
+      "SKILL.md": "[節](references/guide.md#section) と [全体](references/guide.md)。\n",
+      "references/guide.md": "手順\n",
+    });
+
+    // When
+    const paths = referencedDocumentPaths(skill.skillMdPath, skill.dir);
+
+    // Then
+    expect(paths).toEqual([join(skill.dir, "references/guide.md")]);
+  });
+
+  test.each([
+    ["[negative] 外部URLへのリンクは対象に含めない", "[外部](https://example.com/a.md)"],
+    ["[negative] ページ内アンカーのみのリンクは対象に含めない", "[節](#section)"],
+    ["[negative] Markdown以外のファイルへのリンクは対象に含めない", "[script](scripts/run.sh)"],
+    ["[negative] 実在しないファイルへのリンクは対象に含めない", "[無い](references/missing.md)"],
+    ["[negative] スキルの外にあるファイルへのリンクは対象に含めない", "[外](../outside.md)"],
+  ])("%s", (_label, link) => {
+    // Given
+    writeFileSync(join(workspace.root, "outside.md"), "外部\n", "utf8");
+    const skill = workspace.makeSkill("sample-skill", {
+      "SKILL.md": `${link}\n`,
+      "scripts/run.sh": "#!/bin/sh\n",
+    });
+
+    // When
+    const paths = referencedDocumentPaths(skill.skillMdPath, skill.dir);
+
+    // Then
+    expect(paths).toEqual([]);
+  });
+});
+
+describe("referenceDepthRule", () => {
+  test("[positive] 1階層の参照のみのとき問題を報告しない", () => {
+    // Given
+    const skill = workspace.makeSkill("sample-skill", {
+      "SKILL.md": "[手順](references/guide.md)\n",
+      "references/guide.md": "手順\n",
+    });
+
+    // When
+    const findings = referenceDepthRule(skill);
+
+    // Then
+    expect(findings).toEqual([]);
+  });
+
+  test("[positive] 参照先からSKILL.mdへ戻るリンクは連鎖と見なさない", () => {
+    // Given
+    const skill = workspace.makeSkill("sample-skill", {
+      "SKILL.md": "[手順](references/guide.md)\n",
+      "references/guide.md": "[戻る](../SKILL.md)\n",
+    });
+
+    // When
+    const findings = referenceDepthRule(skill);
+
+    // Then
+    expect(findings).toEqual([]);
+  });
+
+  test("[positive] SKILL.mdから直接も辿れる参照先は連鎖と見なさない", () => {
+    // Given
+    const skill = workspace.makeSkill("sample-skill", {
+      "SKILL.md": "[一](references/a.md) [二](references/b.md)\n",
+      "references/a.md": "[二](b.md)\n",
+      "references/b.md": "内容\n",
+    });
+
+    // When
+    const findings = referenceDepthRule(skill);
+
+    // Then
+    expect(findings).toEqual([]);
+  });
+
+  test("[negative] SKILL.mdから2階層先へ辿るリンクの連鎖があるとき、reference-too-deepを報告する", () => {
+    // Given
+    const skill = workspace.makeSkill("sample-skill", {
+      "SKILL.md": "[一](references/a.md)\n",
+      "references/a.md": "[二](b.md)\n",
+      "references/b.md": "内容\n",
+    });
+
+    // When
+    const findings = referenceDepthRule(skill);
+
+    // Then
+    expect(findings).toMatchObject([{ code: "reference-too-deep", source: "spec", level: "should" }]);
+    expect(findings[0]?.message).toContain("references/b.md");
+  });
+
+  test("[negative] 連鎖が複数あるとき連鎖ごとに問題を報告する", () => {
+    // Given
+    const skill = workspace.makeSkill("sample-skill", {
+      "SKILL.md": "[一](references/a.md)\n",
+      "references/a.md": "[二](b.md) [三](c.md)\n",
+      "references/b.md": "内容\n",
+      "references/c.md": "内容\n",
+    });
+
+    // When
+    const findings = referenceDepthRule(skill);
+
+    // Then
+    expect(findings).toMatchObject([
+      { code: "reference-too-deep", source: "spec", level: "should" },
+      { code: "reference-too-deep", source: "spec", level: "should" },
+    ]);
+  });
+});

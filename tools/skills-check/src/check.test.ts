@@ -1,0 +1,113 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+import type { TempWorkspace } from "./test-fixtures.ts";
+
+import { checkSkill, checkSkillsRoot } from "./check.ts";
+import { createTempWorkspace, skillMdOf, VALID_DESCRIPTION } from "./test-fixtures.ts";
+
+let workspace: TempWorkspace;
+
+beforeEach(() => {
+  workspace = createTempWorkspace();
+});
+
+afterEach(() => {
+  workspace.cleanup();
+});
+
+describe("checkSkill", () => {
+  test("[positive] 仕様と規約を満たすスキルは問題を返さない", () => {
+    // Given
+    const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": skillMdOf("sample-skill") });
+
+    // When
+    const problems = checkSkill(dir);
+
+    // Then
+    expect(problems).toEqual([]);
+  });
+
+  test("[negative] ファイル構成の問題で打ち切り、ルールを実行しない", () => {
+    // Given: SKILL.md が無いので、後続のルールは実行できない
+    const dir = workspace.makeSkillDir("sample-skill", {});
+
+    // When
+    const problems = checkSkill(dir);
+
+    // Then
+    expect(problems).toMatchObject([
+      { skillName: "sample-skill", code: "missing-skill-md", source: "spec", level: "must" },
+    ]);
+  });
+
+  test("[negative] スキーマ違反で打ち切り、ルールを実行しない", () => {
+    // Given: name が無いので、name に関するルールは判定できない
+    const content = `---\ndescription: ${VALID_DESCRIPTION}\nextra: 1\n---\n\n本文\n`;
+    const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": content });
+
+    // When
+    const problems = checkSkill(dir);
+
+    // Then: extra-fields は後続のルールなので報告されない
+    expect(problems.map((problem) => problem.code)).toEqual(["name-missing"]);
+  });
+
+  test("[negative] スキーマ違反があるとき指摘なしで検査から外れない", () => {
+    // Given: license が文字列でない場合
+    const content = `---\nname: probe-skill\ndescription: ${VALID_DESCRIPTION}\nlicense: 123\ndisable-model-invocation: true\n---\n\n本文。\n`;
+    const dir = workspace.makeSkillDir("probe-skill", { "SKILL.md": content });
+
+    // When
+    const problems = checkSkill(dir);
+
+    // Then: licenseのスキーマ違反が検出される
+    expect(problems).toMatchObject([
+      { skillName: "probe-skill", code: "license-not-string", source: "spec", level: "must" },
+    ]);
+  });
+
+  test("[negative] 複数のルールに違反するとき両方のcodeをまとめて返す", () => {
+    // Given
+    const content = `---\nname: other-name\ndescription: ${VALID_DESCRIPTION}\nextra: 1\n---\n\n本文\n`;
+    const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": content });
+
+    // When
+    const problems = checkSkill(dir);
+
+    // Then
+    expect(problems.map((problem) => problem.code).sort()).toEqual([
+      "extra-fields",
+      "name-dir-mismatch",
+    ]);
+  });
+
+  test("[negative] nameがディレクトリ名と異なるスキルを検査するとディレクトリ名をskillNameとして返す", () => {
+    // Given
+    const dir = workspace.makeSkillDir("sample-skill", { "SKILL.md": skillMdOf("other-name") });
+
+    // When
+    const problems = checkSkill(dir);
+
+    // Then
+    expect(problems.every((problem) => problem.skillName === "sample-skill")).toBe(true);
+  });
+});
+
+describe("checkSkillsRoot", () => {
+  test("[positive] スキルと非ディレクトリのファイルが混在するとき、ディレクトリ以外を無視し問題のあるスキルだけ返す", () => {
+    // Given
+    workspace.makeSkillDir("valid-skill", { "SKILL.md": skillMdOf("valid-skill") });
+    workspace.makeSkillDir("broken-skill", { "SKILL.md": skillMdOf("mismatched") });
+    writeFileSync(join(workspace.root, "loose-file.md"), "無視される\n", "utf8");
+
+    // When
+    const problems = checkSkillsRoot(workspace.root);
+
+    // Then
+    expect(problems.map((problem) => [problem.skillName, problem.code])).toEqual([
+      ["broken-skill", "name-dir-mismatch"],
+    ]);
+  });
+});

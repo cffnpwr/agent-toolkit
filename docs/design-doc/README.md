@@ -26,3 +26,4 @@ harnessは[primitiveを実行するagent runtime](https://microsoft.github.io/ap
 | [設計原則](./principles.md) | 全体を通しての原則 |
 | [全体アーキテクチャ](./architecture.md) | リポジトリ構成、配布の仕組み |
 | [Hook機構](./hooks.md) | hookの配置、入出力、発火イベント、依存の扱い |
+| [スキルの静的検証](./skills-check.md) | 検査の分類、仕様の解釈、仕様外フィールドの扱い、道具の選定 |
