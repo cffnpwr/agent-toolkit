@@ -11,7 +11,7 @@
   "dependencies": {
     "@cffnpwr/result-ts": "1.1.1",
     "arktype": "2.2.3",
-    "gpt-tokenizer": "3.4.0",
+    "gpt-tokenizer": "4.0.0",
     "yaml": "2.9.0"
   },
   "devDependencies": {
