@@ -193,18 +193,18 @@ describe("findChainViolations", () => {
   });
 
   describe("バイパス", () => {
-    test("[negative] 先頭のCOMMAND_CHAIN_GUARD_DISABLE=1前置で全体をバイパスする", () => {
-      expect(findChainViolations("COMMAND_CHAIN_GUARD_DISABLE=1 a && b")).toEqual([]);
+    test("[negative] 先頭のAPPROVAL_CHAIN_GUARD_DISABLE=1前置で全体をバイパスする", () => {
+      expect(findChainViolations("APPROVAL_CHAIN_GUARD_DISABLE=1 a && b")).toEqual([]);
     });
 
     test("[negative] 木の中の任意の位置にあるバイパス前置でも全体をバイパスする", () => {
-      expect(findChainViolations("a && COMMAND_CHAIN_GUARD_DISABLE=1 b")).toEqual([]);
+      expect(findChainViolations("a && APPROVAL_CHAIN_GUARD_DISABLE=1 b")).toEqual([]);
     });
 
     test.each([
-      "COMMAND_CHAIN_GUARD_DISABLE=0 a && b",
-      "COMMAND_CHAIN_GUARD_DISABLE=false a && b",
-      "COMMAND_CHAIN_GUARD_DISABLE= a && b",
+      "APPROVAL_CHAIN_GUARD_DISABLE=0 a && b",
+      "APPROVAL_CHAIN_GUARD_DISABLE=false a && b",
+      "APPROVAL_CHAIN_GUARD_DISABLE= a && b",
     ])("[positive] バイパス前置が偽値(%s)のとき、バイパスしない", (command) => {
       expect(findChainViolations(command)).toHaveLength(1);
     });

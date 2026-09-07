@@ -1,5 +1,5 @@
 /**
- * command-chain-guard hook本体。
+ * approval-chain-guard hook本体。
  *
  * HarnessのPreToolUse入力をstdinで受け取る。
  * 1回のシェルコマンド呼び出しに`&&`・`||`・`;`(改行含む)で複数コマンドを詰め込む操作を実行前にブロックし、
@@ -36,17 +36,17 @@ const run = async (): Promise<void> => {
   if (violations.length === 0) return;
 
   block(
-    "command-chain-guard: this call chains multiple commands with &&, || or ; (or a newline). "
+    "approval-chain-guard: this call chains multiple commands with &&, || or ; (or a newline). "
     + "Split it into separate tool calls, one command per call:\n"
     + `${violations.map(describe).join("\n")}\n`
     + "Exceptions: a single leading `cd <dir> &&` and a single `command -v X || <fallback>` "
     + "existence check are allowed.\n"
-    + "If this chain is really required, prefix the command with COMMAND_CHAIN_GUARD_DISABLE=1 "
-    + "(e.g. COMMAND_CHAIN_GUARD_DISABLE=1 a && b) to bypass this check once.",
+    + "If this chain is really required, prefix the command with APPROVAL_CHAIN_GUARD_DISABLE=1 "
+    + "(e.g. APPROVAL_CHAIN_GUARD_DISABLE=1 a && b) to bypass this check once.",
   );
 };
 
 run().catch((err: unknown) => {
-  process.stderr.write(`command-chain-guard: ${String(err)}\n`);
+  process.stderr.write(`approval-chain-guard: ${String(err)}\n`);
   process.exit(1);
 });

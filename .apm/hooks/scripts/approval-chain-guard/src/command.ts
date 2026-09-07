@@ -12,7 +12,7 @@ import { parse } from "unbash";
 
 import type { ChainViolation } from "./types.ts";
 
-const BYPASS_VAR = "COMMAND_CHAIN_GUARD_DISABLE";
+const BYPASS_VAR = "APPROVAL_CHAIN_GUARD_DISABLE";
 const FALSE_VALUES = new Set(["", "0", "false", "no", "off"]);
 const CD_ALLOWED_FLAGS = new Set(["-L", "-P"]);
 
@@ -29,7 +29,7 @@ type Target = Node | Statement[] | Word | undefined;
 
 const wordValue = (w: Word | undefined): string | undefined => w?.value;
 
-// 先頭env代入にCOMMAND_CHAIN_GUARD_DISABLE(偽値以外)があるかを判定する。
+// 先頭env代入にAPPROVAL_CHAIN_GUARD_DISABLE(偽値以外)があるかを判定する。
 const hasBypassPrefix = (command: Command): boolean => command.prefix.some(
   (assign) => assign.name === BYPASS_VAR
     && !FALSE_VALUES.has((assign.value?.value ?? "").toLowerCase()),
@@ -190,7 +190,7 @@ const walk = (target: Target, ctx: Context): void => {
 
 /**
  * コマンド文字列をパースし、`&&`・`||`・`;`(改行含む)による連結を検知する。
- * COMMAND_CHAIN_GUARD_DISABLE(偽値以外)の前置がどこかにあれば、呼び出し全体をバイパスして空配列を返す。
+ * APPROVAL_CHAIN_GUARD_DISABLE(偽値以外)の前置がどこかにあれば、呼び出し全体をバイパスして空配列を返す。
  */
 export const findChainViolations = (command: string): ChainViolation[] => {
   const ctx: Context = { source: command, violations: [], bypassed: false };

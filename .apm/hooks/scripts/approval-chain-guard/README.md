@@ -1,4 +1,4 @@
-# command-chain-guard
+# approval-chain-guard
 
 シェルコマンド実行前(PreToolUse)に、1回の呼び出しへ`&&`・`||`・`;`(改行含む)で複数コマンドを詰め込む操作をブロックし、1呼び出し1コマンドへの分割を促すhook。`|`は対象外。
 
@@ -64,8 +64,8 @@ agent-toolkit全スキルのRequirements節で使われる存在確認の定型�
 
 | 経路 | 効果 |
 | --- | --- |
-| hookプロセスの環境変数`COMMAND_CHAIN_GUARD_DISABLE`を真値に設定 | セッション全体で無効化(起動スクリプトが即通過) |
-| コマンド文字列のASTのどこかに(木の中の任意の位置の)`COMMAND_CHAIN_GUARD_DISABLE=1`前置代入がある | その呼び出し全体を一時バイパス |
+| hookプロセスの環境変数`APPROVAL_CHAIN_GUARD_DISABLE`を真値に設定 | セッション全体で無効化(起動スクリプトが即通過) |
+| コマンド文字列のASTのどこかに(木の中の任意の位置の)`APPROVAL_CHAIN_GUARD_DISABLE=1`前置代入がある | その呼び出し全体を一時バイパス |
 
 いずれの経路も、偽値(未設定・空・`0`・`false`・`no`・`off`。大文字小文字無視)では無効化しない。
 偽値の集合はgit-configのbooleanの偽値に合わせる。
@@ -90,7 +90,7 @@ AI Agentへ渡すフィードバック・警告は簡単な英語で出力する
 
 | ファイル | 責務 |
 | --- | --- |
-| `command-chain-guard.sh` | 起動スクリプト(無効化判定・事前フィルタ・bun存在確認・依存同期) |
+| `approval-chain-guard.sh` | 起動スクリプト(無効化判定・事前フィルタ・bun存在確認・依存同期) |
 | `src/main.ts` | エントリ・全体の制御・出力 |
 | `src/input.ts` | hook入力からコマンドを抽出 |
 | `src/command.ts` | コマンドのパースと連結違反の検知・例外判定・バイパス判定 |
@@ -100,7 +100,7 @@ AI Agentへ渡すフィードバック・警告は簡単な英語で出力する
 
 | 変数 | 既定 | 用途 |
 | --- | --- | --- |
-| `COMMAND_CHAIN_GUARD_DISABLE` | (未設定) | 真値でhook全体を無効化(偽値: 空・`0`・`false`・`no`・`off`)。ASTの木の中の任意の位置への前置は呼び出し全体を一時バイパス |
+| `APPROVAL_CHAIN_GUARD_DISABLE` | (未設定) | 真値でhook全体を無効化(偽値: 空・`0`・`false`・`no`・`off`)。ASTの木の中の任意の位置への前置は呼び出し全体を一時バイパス |
 
 ## Requirements
 
