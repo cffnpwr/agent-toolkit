@@ -1,11 +1,12 @@
 {
   "hooks": {
-    "PreToolUse": [
+    "PermissionRequest": [
       {
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "./scripts/command-chain-guard/command-chain-guard.sh",
+            "command": "./scripts/approval-chain-guard/approval-chain-guard.sh",
             "timeout": 60
           }
         ]

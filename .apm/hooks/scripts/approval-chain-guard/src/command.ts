@@ -10,17 +10,17 @@ import type {
 
 import { parse } from "unbash";
 
-import type { ChainViolation } from "./types.ts";
+import type { ChainAnalysis, ChainViolation } from "./types.ts";
 
-const BYPASS_VAR = "COMMAND_CHAIN_GUARD_DISABLE";
-const FALSE_VALUES = new Set(["", "0", "false", "no", "off"]);
 const CD_ALLOWED_FLAGS = new Set(["-L", "-P"]);
 
 // 走査中に積み上げる可変な状態。1回の解析につき1個生成する。
 interface Context {
   source: string;
   violations: ChainViolation[];
-  bypassed: boolean;
+  // トップレベル(Script直下のStatementリスト、またはその唯一のStatementのAndOr)を違反にしたか。
+  // 分割案を作れる形かの判定に使う。
+  topLevelViolated: boolean;
 }
 
 // walkが辿る対象。Statementの並び(CompoundList/Script共通の判定単位)と、
@@ -28,12 +28,6 @@ interface Context {
 type Target = Node | Statement[] | Word | undefined;
 
 const wordValue = (w: Word | undefined): string | undefined => w?.value;
-
-// 先頭env代入にCOMMAND_CHAIN_GUARD_DISABLE(偽値以外)があるかを判定する。
-const hasBypassPrefix = (command: Command): boolean => command.prefix.some(
-  (assign) => assign.name === BYPASS_VAR
-    && !FALSE_VALUES.has((assign.value?.value ?? "").toLowerCase()),
-);
 
 // cd例外の先頭セグメント: `cd <dir>`(フラグは-L/-Pのみ許容、非フラグ引数はちょうど1個)。
 const isCdHead = (cmd: Command): boolean => {
@@ -47,11 +41,6 @@ const isCdHead = (cmd: Command): boolean => {
   return dirArgs === 1;
 };
 
-// command -v例外の先頭セグメント: `command -v <name>`(過不足ない2語のsuffix)。
-const isCommandVHead = (cmd: Command): boolean => wordValue(cmd.name) === "command"
-  && cmd.suffix.length === 2
-  && cmd.suffix[0]?.value === "-v";
-
 // cd例外: 全演算子が&&・セグメント2個・先頭がcd単体呼び出し。
 const isCdException = (node: AndOr): boolean => {
   if (node.commands.length !== 2 || !node.operators.every((op) => op === "&&")) return false;
@@ -59,20 +48,12 @@ const isCdException = (node: AndOr): boolean => {
   return head?.type === "Command" && isCdHead(head);
 };
 
-// command -v例外: 全演算子が||・セグメント2個・先頭がcommand -v単体呼び出し。
-// 一致したときは残りのセグメントのサブツリーを走査しない(呼び出し側の責務)。
-const isCommandVException = (node: AndOr): boolean => {
-  if (node.commands.length !== 2 || !node.operators.every((op) => op === "||")) return false;
-  const head = node.commands[0];
-  return head?.type === "Command" && isCommandVHead(head);
-};
-
 /**
  * コマンド文字列のAST(Node)・Statementの並び・Wordの各部を再帰的に辿り、
  * 連結違反(ChainViolation)を集める。到達可能な全ての複合構文(サブシェル・if・for・while・
  * function・case等)の内部、およびcommand/process substitutionの内部まで対象にする。
  */
-const walk = (target: Target, ctx: Context): void => {
+const walk = (target: Target, ctx: Context, topLevel = false): void => {
   if (target === undefined) return;
 
   if (Array.isArray(target)) {
@@ -88,8 +69,10 @@ const walk = (target: Target, ctx: Context): void => {
         label: "; or newline",
         snippet: ctx.source.slice(first.pos, last.end),
       });
+      if (topLevel) ctx.topLevelViolated = true;
     }
-    for (const stmt of target) walk(stmt, ctx);
+    // 並びが1個のときだけ、その中身もトップレベルの連結として扱う。
+    for (const stmt of target) walk(stmt, ctx, topLevel && target.length === 1);
     return;
   }
 
@@ -124,22 +107,17 @@ const walk = (target: Target, ctx: Context): void => {
 
   switch (target.type) {
     case "Statement":
-      walk(target.command, ctx);
+      walk(target.command, ctx, topLevel);
       break;
     case "AndOr": {
-      const exempt = isCdException(target) || isCommandVException(target);
-      if (!exempt) {
+      if (!isCdException(target)) {
         ctx.violations.push({
           label: [...new Set(target.operators)].join("/"),
           snippet: ctx.source.slice(target.pos, target.end),
         });
+        if (topLevel) ctx.topLevelViolated = true;
       }
-      if (isCommandVException(target)) {
-        // 一致した残り側のサブツリーは丸ごと素通りさせる。先頭のcommand -v呼び出しだけ走査する。
-        walk(target.commands[0], ctx);
-      } else {
-        for (const child of target.commands) walk(child, ctx);
-      }
+      for (const child of target.commands) walk(child, ctx);
       break;
     }
     case "Pipeline":
@@ -176,7 +154,6 @@ const walk = (target: Target, ctx: Context): void => {
       for (const item of target.items) walk(item.body.commands, ctx);
       break;
     case "Command": {
-      if (hasBypassPrefix(target)) ctx.bypassed = true;
       const heldWords: (Word | undefined)[] = [target.name, ...target.suffix];
       for (const assign of target.prefix) heldWords.push(assign.value);
       for (const redirect of target.redirects) heldWords.push(redirect.target, redirect.body);
@@ -188,12 +165,49 @@ const walk = (target: Target, ctx: Context): void => {
   }
 };
 
+// 1呼び出しずつに分けられるセグメント。複合構文はそれ自体が複数コマンドを含むため対象外にする。
+const isSplittableSegment = (node: Node): boolean => node.type === "Command" || node.type === "Pipeline";
+
+/**
+ * トップレベルの連結を、1呼び出しずつのコマンド列へ分ける。
+ * セグメントに複合構文が混じる場合は分けられないためundefinedを返す。
+ * `cd <dir> &&`で始まる&&連鎖は、cwdが呼び出しごとにリセットされるharnessでも各項が成立するよう、
+ * `cd <dir>`を各項へ再前置する。
+ */
+const buildSplitPlan = (statements: Statement[], source: string): string[] | undefined => {
+  const slice = (node: { end: number; pos: number; }): string => source.slice(node.pos, node.end);
+
+  if (statements.length > 1) {
+    if (!statements.every((stmt) => isSplittableSegment(stmt.command))) return undefined;
+    return statements.map(slice);
+  }
+
+  const only = statements[0]?.command;
+  if (only?.type !== "AndOr") return undefined;
+  const segments = only.commands;
+  if (!segments.every(isSplittableSegment)) return undefined;
+
+  const head = segments[0];
+  if (head?.type === "Command" && isCdHead(head) && only.operators.every((op) => op === "&&")) {
+    const prefix = slice(head);
+    return segments.slice(1).map((segment) => `${prefix} && ${slice(segment)}`);
+  }
+  return segments.map(slice);
+};
+
 /**
  * コマンド文字列をパースし、`&&`・`||`・`;`(改行含む)による連結を検知する。
- * COMMAND_CHAIN_GUARD_DISABLE(偽値以外)の前置がどこかにあれば、呼び出し全体をバイパスして空配列を返す。
+ * 検知が1件かつそれがトップレベルの連結のときだけ、分割案(split)を添える。
+ * 2件以上あるときは、より深い階層にも連結があり機械的に分けられないため添えない。
  */
-export const findChainViolations = (command: string): ChainViolation[] => {
-  const ctx: Context = { source: command, violations: [], bypassed: false };
-  walk(parse(command).commands, ctx);
-  return ctx.bypassed ? [] : ctx.violations;
+export const analyzeChain = (command: string): ChainAnalysis => {
+  const script = parse(command);
+  const ctx: Context = { source: command, violations: [], topLevelViolated: false };
+  walk(script.commands, ctx, true);
+
+  const splittable = ctx.violations.length === 1 && ctx.topLevelViolated;
+  return {
+    violations: ctx.violations,
+    split: splittable ? buildSplitPlan(script.commands, command) : undefined,
+  };
 };

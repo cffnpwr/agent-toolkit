@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "command-chain-guard",
+      "name": "approval-chain-guard",
       "dependencies": {
         "unbash": "4.0.11",
       },
