@@ -7,3 +7,10 @@ export interface ChainViolation {
   label: string;
   snippet: string;
 }
+
+// 1つのコマンド文字列の解析結果。
+export interface ChainAnalysis {
+  violations: ChainViolation[];
+  // 1呼び出しずつに分けたコマンド列。連結がトップレベルの1箇所だけで、各セグメントが単純コマンドかpipelineのときだけ埋まる。
+  split: string[] | undefined;
+}

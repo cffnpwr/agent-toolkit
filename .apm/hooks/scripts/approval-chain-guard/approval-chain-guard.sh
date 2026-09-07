@@ -1,19 +1,12 @@
 #!/bin/sh
 # approval-chain-guard hookの起動スクリプト。
-# PreToolUse入力をstdinで受け、&&・||・;(改行含む)の可能性がある呼び出しだけを本体main.tsに渡す。
+# PermissionRequest入力をstdinで受け、&&・||・;(改行含む)の可能性がある呼び出しだけを本体main.tsに渡す。
 # 対象判定・例外判定は本体に委ね、明らかに該当しない呼び出しはbun起動前に除外する。
 # bunが無いときはfail-openの警告を出して通す。
 set -u
 
-# PreToolUseのJSON入力を取得する。
+# PermissionRequestのJSON入力を取得する。
 input=$(cat)
-
-# セッション全体の無効化。環境変数APPROVAL_CHAIN_GUARD_DISABLEが真値なら通過する。
-# 偽値(未設定・空・0・false・no・off。大文字小文字無視)は無効化しない(git-configのbooleanの偽値に合わせる)。
-case "${APPROVAL_CHAIN_GUARD_DISABLE:-}" in
-  "" | 0 | [Ff][Aa][Ll][Ss][Ee] | [Nn][Oo] | [Oo][Ff][Ff]) ;;
-  *) exit 0 ;;
-esac
 
 # bunを起動しないための事前フィルタ。
 # &&・||・;・改行(JSON上は\nエスケープ)のいずれも含まなければ、連結の可能性が無いため即通過する。

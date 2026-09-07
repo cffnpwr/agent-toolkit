@@ -1,19 +1,24 @@
 # approval-chain-guard
 
-シェルコマンド実行前(PreToolUse)に、1回の呼び出しへ`&&`・`||`・`;`(改行含む)で複数コマンドを詰め込む操作をブロックし、1呼び出し1コマンドへの分割を促すhook。`|`は対象外。
+承認プロンプトが出る呼び出し(PermissionRequest)のうち、`&&`・`||`・`;`(改行含む)で複数コマンドを詰め込んだものを拒否し、1呼び出し1コマンドへの分割を促すhook。`|`は対象外。
 
-- 介入点はPreToolUse。目的が操作の抑止であり、実行後では間に合わないため、実行前にコマンド文字列を解析する。
+- 介入点はPermissionRequest。承認プロンプトを出す直前にだけ発火するため、承認が要る呼び出しだけに作用する。
+  承認の要否はharnessが判定し、hookは届いた呼び出しが連結かどうかだけを判定する。
 - 判定は「1リストに複数のコマンドが並んでいるか」の構造判定であり、denylist/allowlistのような操作の種類による分類ではない。
 - 到達可能な全ての複合構文(サブシェル・if・for・while・function・case等)の内部、およびcommand/process substitutionの内部まで走査する。
-- `cd <dir> &&`単発と`command -v X || <fallback>`の存在確認は例外として通過する。
-- 出力は移植性の高い終了コードに一本化する。
-  ブロックはexit 2 + stderr、実行不可はexit 1 + stderr、通過・対象外はexit 0・無出力。
+- `cd <dir> &&`単発は例外として通過する。
+- 拒否はstdoutのdecision JSONで返し、終了コードは常に0または1にする。
 
 ## 入力の抽出と対応Harness
 
 コマンドはhook入力の`tool_input.command`から取り出す。
-このフィールドはClaude(hooks docs, Bashツール)、Codex(`pre_tool_use.rs`)、Gemini(`ShellToolParams.command`)で確認済み。
-CopilotはcamelCaseの`toolArgs`を使い、コマンドのサブフィールド名が未文書化のため対象外とする。
+
+| Harness | 対応 | 根拠 |
+| --- | --- | --- |
+| Claude Code | 対応 | `PermissionRequest`は承認を求める直前に発火し、`tool_name`・`tool_input`を受け取る(`tool_use_id`は無い)。[hooks reference](https://code.claude.com/docs/en/hooks#permissionrequest) |
+| Codex | 対応 | 同名イベントを持ち、承認経路で発火する。`tool_name`は`"Bash"`、コマンドは`tool_input.command`(`codex-rs/hooks/src/events/permission_request.rs`・`codex-rs/core/src/tools/sandboxing.rs`) |
+| Gemini CLI | 非対応 | 承認経路のイベントが無い。ツール関連は`BeforeToolSelection`・`BeforeTool`・`AfterTool`のみ(`packages/core/src/hooks/types.ts`の`HookEventName`) |
+| Copilot | 対象外 | camelCaseの`toolArgs`を使い、コマンドのサブフィールド名が未文書化 |
 
 ## 検知対象
 
@@ -31,6 +36,7 @@ CopilotはcamelCaseの`toolArgs`を使い、コマンドのサブフィールド
 | --- | --- | --- |
 | 演算子連結 | `&&`・`\|\|`・`;`・改行 | 対応(違反として検知) |
 | pipe | `\|` | 対応(連結として扱わない。各segmentの内部は走査する) |
+| バックグラウンド実行 | `a & b` | 対応(`&`だけで繋がれた並びは連結として扱わない) |
 | コマンド置換 | `$(a && b)`・`` `a && b` `` | 対応(内部を走査。ネスト、代入値・リダイレクト先・パラメータ展開の値の中を含む) |
 | プロセス置換 | `<(a && b)`・`>(a && b)` | 対応(内部を走査) |
 | サブシェル・複合構文 | `( )`・`if`・`for`・`while`・`select`・`case`・`function`・`coproc`・`{ }`(brace group)等 | 対応(本体の内部まで走査する) |
@@ -39,11 +45,10 @@ CopilotはcamelCaseの`toolArgs`を使い、コマンドのサブフィールド
 
 ## 例外
 
-いずれも走査中に出会う**あらゆる階層**の`AndOr`ノードに同じ条件で適用する(トップレベルに限らない)。
-
 ### `cd`例外
 
-cwdがBash呼び出しごとにリセットされるハーネス制約への対処として、`cd <dir> && <単一コマンド>`のみ許容する。
+cwdがBash呼び出しごとにリセットされるharness制約への対処として、`cd <dir> && <単一コマンド>`のみ許容する。
+走査中に出会う**あらゆる階層**の`AndOr`ノードに同じ条件で適用する(トップレベルに限らない)。
 
 - 演算子が全て`&&`
 - セグメントがちょうど2個(`cd`呼び出し＋残り1個)
@@ -51,56 +56,44 @@ cwdがBash呼び出しごとにリセットされるハーネス制約への対�
 - 残り側のセグメントは通常どおり内部まで走査する。
   `cd dir && { a; b; }`のように残り側自体が複数コマンドなら、そちらは別途違反として検知する。
 
-### `command -v`例外
-
-agent-toolkit全スキルのRequirements節で使われる存在確認の定型句(`command -v X >/dev/null 2>&1 || { echo ...; exit 1; }`)を通すための例外。
-
-- 演算子が全て`||`
-- セグメントがちょうど2個(`command -v`呼び出し＋残り1個)
-- 先頭セグメントが`command -v <name>`単体の呼び出し(過不足ない2語の引数。リダイレクトは任意個許容)
-- 一致したときは**残り側のサブツリーを一切走査しない**。フォールバック処理(`{ echo ...; exit 1; }`等)の内部に`;`があっても関知しない
-
-## エスケープハッチ
-
-| 経路 | 効果 |
-| --- | --- |
-| hookプロセスの環境変数`APPROVAL_CHAIN_GUARD_DISABLE`を真値に設定 | セッション全体で無効化(起動スクリプトが即通過) |
-| コマンド文字列のASTのどこかに(木の中の任意の位置の)`APPROVAL_CHAIN_GUARD_DISABLE=1`前置代入がある | その呼び出し全体を一時バイパス |
-
-いずれの経路も、偽値(未設定・空・`0`・`false`・`no`・`off`。大文字小文字無視)では無効化しない。
-偽値の集合はgit-configのbooleanの偽値に合わせる。
-
-判定単位が「呼び出し全体の連結構造」であり、prefer-jjのようなsimple command単位のバイパスとは意味が異なるため、前置が木の中のどこにあっても呼び出し全体をバイパスする。
-
 ## 出力プロトコル
 
 | 状況 | 出力 | 効果 |
 | --- | --- | --- |
-| ブロック | exit 2 + stderrに検知した連結箇所を出力 | Claude/Codex/Geminiにフィードバック |
+| 拒否 | exit 0 + stdoutに`{"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"..."}}}` | Claude/Codexが呼び出しを拒否し、`message`をAgentへ渡す |
 | 通過 | exit 0・無出力 | 何もしない |
-| 実行不可 | exit 1 + stderr | Claude/Codex/Geminiで非ブロック警告 |
+| 実行不可 | exit 1 + stderr | `decision`なしとして通常の承認フローへ戻る(fail-open) |
+
+拒否をJSONで返す理由は[ADR 0007](../../../../docs/adr/0007-permission-request-json-decision.md)を参照する。
+`decision`には`behavior`・`message`以外を入れない。
+Codexは未知フィールドを含む`decision`を不正として扱う(`codex-rs/hooks/src/schema.rs`の`deny_unknown_fields`)。
 
 入力を抽出できないHarness(Copilot等)は通過となり、上の効果は生じない。
+AI Agentへ渡す拒否理由・警告は簡単な英語で出力する。
 
-exit 2 + 非空stderrの扱いは各Harnessの公式hook仕様・実装で確認した。
-Claudeはstderrをモデルへ渡し、Codexはexit 2 + 非空stderrをBlockedとし、Geminiはツール出力をstderrで置換して継続する。
-AI Agentへ渡すフィードバック・警告は簡単な英語で出力する。
+## 拒否メッセージ
+
+`message`には、分けられる形なら1呼び出しずつの分割案を、分けられない形なら検知箇所を入れる。
+
+分割案は、連結がトップレベルの1箇所だけで、各セグメントが単純コマンドかpipelineのときに作る。
+
+- 各項の文字列はソースのスライスをそのまま使い、番号付きで列挙する。
+- 先頭が`cd <dir>`で演算子が全て`&&`のとき(`cd d && a && b`)は、`cd <dir>`を各項へ再前置する(`cd d && a`・`cd d && b`)。
+  `cd d; a; b`のように`;`区切りのときは再前置せず、`cd d`・`a`・`b`の3項にする。
+- `&&`・`||`の条件実行が分割で失われることを併記する。
+
+複合構文の本体や置換の内部に違反がある場合、およびセグメントが複合構文の場合は、機械的に分けられないため検知箇所(`ラベル: 該当箇所`)を列挙し、各コマンドを単独の呼び出しにするよう促す。
 
 ## 構成
 
 | ファイル | 責務 |
 | --- | --- |
-| `approval-chain-guard.sh` | 起動スクリプト(無効化判定・事前フィルタ・bun存在確認・依存同期) |
+| `approval-chain-guard.sh` | 起動スクリプト(事前フィルタ・bun存在確認・依存同期) |
 | `src/main.ts` | エントリ・全体の制御・出力 |
 | `src/input.ts` | hook入力からコマンドを抽出 |
-| `src/command.ts` | コマンドのパースと連結違反の検知・例外判定・バイパス判定 |
+| `src/command.ts` | コマンドのパースと連結違反の検知・例外判定・分割案の算出 |
+| `src/suggest.ts` | 拒否メッセージの組み立て |
 | `src/types.ts` | 共有型 |
-
-## 設定(環境変数)
-
-| 変数 | 既定 | 用途 |
-| --- | --- | --- |
-| `APPROVAL_CHAIN_GUARD_DISABLE` | (未設定) | 真値でhook全体を無効化(偽値: 空・`0`・`false`・`no`・`off`)。ASTの木の中の任意の位置への前置は呼び出し全体を一時バイパス |
 
 ## Requirements
 

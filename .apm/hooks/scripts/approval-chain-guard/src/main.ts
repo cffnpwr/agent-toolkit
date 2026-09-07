@@ -1,29 +1,30 @@
 /**
  * approval-chain-guard hook本体。
  *
- * HarnessのPreToolUse入力をstdinで受け取る。
- * 1回のシェルコマンド呼び出しに`&&`・`||`・`;`(改行含む)で複数コマンドを詰め込む操作を実行前にブロックし、
+ * HarnessのPermissionRequest入力をstdinで受け取る。
+ * 承認プロンプトが出る呼び出しに`&&`・`||`・`;`(改行含む)で複数コマンドが詰め込まれていれば拒否し、
  * 1呼び出し1コマンドへの分割を促す。`|`(pipe)は対象外。
  *
  * 出力プロトコル(全Harness共通):
- * - ブロック: exit 2 + stderr(Claude/Codex/GeminiはAgentにフィードバック)
- * - 実行不可(fail-open): exit 1 + stderr(全Harnessで非ブロック警告)
+ * - 拒否: exit 0 + stdoutのdecision JSON(Claude Codeはこのイベントでexit 2を無視する)
+ * - 実行不可(fail-open): exit 1 + stderr(decisionなしとして通常の承認フローへ戻る)
  * - 通過・対象外: exit 0・無出力
  */
 
-import type { ChainViolation } from "./types.ts";
-
-import { findChainViolations } from "./command.ts";
+import { analyzeChain } from "./command.ts";
 import { extractCommand, isObject } from "./input.ts";
+import { buildDenyMessage } from "./suggest.ts";
 
-// ブロックフィードバック。
-// 全Harnessがexit 2 + stderrをブロック/フィードバックとして扱う。
-const block = (reason: string): never => {
-  process.stderr.write(`${reason}\n`);
-  process.exit(2);
+// 拒否decision。Codexはdecisionの未知フィールドを不正として扱う(deny_unknown_fields)ため、
+// 両Harnessが解釈するbehavior・message以外を入れない。
+const deny = (message: string): void => {
+  process.stdout.write(`${JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: "PermissionRequest",
+      decision: { behavior: "deny", message },
+    },
+  })}\n`);
 };
-
-const describe = (violation: ChainViolation): string => `  ${violation.label}: ${violation.snippet}`;
 
 const run = async (): Promise<void> => {
   const parsed: unknown = JSON.parse(await Bun.stdin.text());
@@ -32,18 +33,10 @@ const run = async (): Promise<void> => {
   const command = extractCommand(parsed);
   if (command === undefined) return;
 
-  const violations = findChainViolations(command);
-  if (violations.length === 0) return;
+  const analysis = analyzeChain(command);
+  if (analysis.violations.length === 0) return;
 
-  block(
-    "approval-chain-guard: this call chains multiple commands with &&, || or ; (or a newline). "
-    + "Split it into separate tool calls, one command per call:\n"
-    + `${violations.map(describe).join("\n")}\n`
-    + "Exceptions: a single leading `cd <dir> &&` and a single `command -v X || <fallback>` "
-    + "existence check are allowed.\n"
-    + "If this chain is really required, prefix the command with APPROVAL_CHAIN_GUARD_DISABLE=1 "
-    + "(e.g. APPROVAL_CHAIN_GUARD_DISABLE=1 a && b) to bypass this check once.",
-  );
+  deny(buildDenyMessage(analysis));
 };
 
 run().catch((err: unknown) => {

@@ -1,7 +1,8 @@
 {
   "hooks": {
-    "PreToolUse": [
+    "PermissionRequest": [
       {
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
