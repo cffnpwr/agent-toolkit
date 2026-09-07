@@ -1,0 +1,11 @@
+name: delegation
+version: 1.0.0
+description: 経緯を知る必要がない作業をサブエージェントへ委譲し、結果だけを受け取る進め方
+author: cffnpwr
+license: MIT
+type: skill
+
+dependencies:
+  apm:
+    - git: parent
+      path: .apm/skills/flat-review
