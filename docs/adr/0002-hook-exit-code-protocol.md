@@ -1,6 +1,6 @@
 ---
 ID: 2
-date: 2026-08-14
+date: 2026-09-07
 status: accepted
 ---
 
@@ -97,3 +97,4 @@ harnessごとに増減するフィールドもある(Codexの`model`・`permissi
 - ユーザーへの確認や入力の書き換えを要する要件は、hookでは実現しない
 - 効果のharness差は残る(Gemini CLIではブロックでなくツール出力の置換になる)
 - 入力を抽出できないharnessでは、hookは無作用になる
+- `PermissionRequest`イベントはこの決定の対象外とし、[ADR 0007](./0007-permission-request-json-decision.md)に従う

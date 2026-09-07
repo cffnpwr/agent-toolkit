@@ -14,6 +14,7 @@ hookは、[harnessのライフサイクルイベントで実行されるprimitiv
 - APMはhook定義ファイルを`.apm/hooks/`直下の`glob("*.json")`で探索する([plugin_exporter.py](https://github.com/microsoft/apm/blob/main/src/apm_cli/bundle/plugin_exporter.py)・[validation.py](https://github.com/microsoft/apm/blob/main/src/apm_cli/models/validation.py))。
   サブディレクトリは対象外のため、`scripts/`配下の`package.json`・`tsconfig.json`等がhook定義ファイルとして誤検知されることはない。
 - hook定義ファイルが指定するイベント名は、APMがターゲットごとに変換する(`PreToolUse`はGemini CLIでは`BeforeTool`)([hook_integrator.py](https://github.com/microsoft/apm/blob/main/src/apm_cli/integration/hook_integrator.py))。
+  変換表に無いイベント名(`PermissionRequest`等)は、各ターゲットへそのまま転記される。
 - hookを受け取るharnessは[targets matrix](https://github.com/microsoft/apm/blob/main/docs/src/content/docs/reference/targets-matrix.md)が定める。
   hookの概念を持たないOpenCodeはskipされる。
 
@@ -31,12 +32,24 @@ hookは、[harnessのライフサイクルイベントで実行されるprimitiv
 
 効果は終了コードとstderrへ一本化する。
 harness固有のJSON出力プロトコルには頼らない([ADR 0002](../adr/0002-hook-exit-code-protocol.md))。
+`PermissionRequest`イベントは例外で、拒否をstdoutのJSON(`hookSpecificOutput.decision`)で伝える([ADR 0007](../adr/0007-permission-request-json-decision.md))。
+Claude Codeがこのイベントで終了コードによるブロックを受け付けないためである。
 
 | 状況 | 出力 | 意味 |
 | --- | --- | --- |
 | 違反・ブロック | exit 2 + stderr | 違反内容をAgentにフィードバックさせる |
 | 実行不可(fail-open) | exit 1 + stderr | 非ブロックの警告として通す |
 | 通過・対象外 | exit 0・無出力 | 何もしない |
+
+`PermissionRequest`イベントでは次のとおり。
+
+| 状況 | 出力 | 意味 |
+| --- | --- | --- |
+| 拒否 | exit 0 + stdoutのJSON(`hookSpecificOutput.decision`の`behavior: "deny"`と`message`) | 拒否理由をAgentにフィードバックさせる |
+| 実行不可(fail-open) | exit 1 + stderr | `decision`なしとして通常の承認フローに戻す |
+| 通過・対象外 | exit 0・無出力 | 何もしない |
+
+`decision`には、対応する全harnessが受理するフィールド以外を入れない。
 
 終了コードの意味と各harnessでの実挙動は、各harnessの公式hook仕様・実装で確認する(記憶や推測で断定しない)。
 AI Agentへ渡すフィードバック・警告は簡単な英語で出力する。
@@ -46,6 +59,8 @@ AI Agentへ渡すフィードバック・警告は簡単な英語で出力する
 - 操作を止めることが目的なら、操作が適用される前のイベントを選ぶ。
   適用後では変更が済んでおり間に合わない。
   適用前は実状態を読めないため入力を解析して対象を判定することになり、誤判定で正当な操作を阻害しないよう、対象と確信できるときだけ作用させる。
+- 承認が要る呼び出しに限って作用させたいなら、承認プロンプトの直前に発火する`PermissionRequest`を選ぶ。
+  承認要否はharnessが判定し、`PreToolUse`の入力からは読めない([ADR 0007](../adr/0007-permission-request-json-decision.md))。
 - 操作結果の検証が目的なら、適用後のイベントを選び、結果を一次ソースとして読み直す。
   入力から意図を再構成する場合と違い、入力の渡し方(引数・標準入力・変数展開等)に左右されない。
   結果の読み取りが実行形態に妨げられる場合は、適用前に入力から判定する。
