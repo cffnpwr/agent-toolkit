@@ -5,7 +5,7 @@ description: >
   (1) ドキュメント・README・コミットメッセージ・issue/PR本文・コードコメントなど日本語の文章を書くとき、
   (2) 既存の日本語文章の品質をレビューするとき、
   (3) textlintを実行して日本語文書を機械的にチェックするときに使う。
-  textlintのセットアップと実行、結果の解釈、textlintでは検出できないルール（誤検出の少ないパターン）、
+  textlintのセットアップと実行、結果の解釈、textlintでは検出できないルール（AIによる補完レビューで判断する項目）、
   誤検出時の抑制方法を扱う。
 compatibility: |
   Required: bun >= 1.2; packages: textlint + 日本語向けルール群・prh（package.json / bun.lock 経由）
