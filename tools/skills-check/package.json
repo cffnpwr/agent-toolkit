@@ -18,7 +18,7 @@
     "@cffnpwr/eslint-config": "2.0.1",
     "@cffnpwr/tsconfig": "1.0.0",
     "@types/bun": "1.4.2",
-    "@typescript-eslint/parser": "8.69.0",
+    "@typescript-eslint/parser": "8.70.0",
     "eslint": "10.10.0",
     "globals": "17.12.0",
     "jiti": "2.7.0",
