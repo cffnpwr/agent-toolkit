@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "unbash": "4.0.11"
+    "unbash": "4.0.12"
   },
   "devDependencies": {
     "@cffnpwr/eslint-config": "2.0.1",
