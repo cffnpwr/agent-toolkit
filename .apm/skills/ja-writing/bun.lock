@@ -5,7 +5,7 @@
     "": {
       "name": "ja-writing-linter",
       "dependencies": {
-        "@cffnpwr/textlint-rule-preset-ja-writing-extras": "1.1.0",
+        "@cffnpwr/textlint-rule-preset-ja-writing-extras": "1.1.1",
         "@textlint-ja/textlint-rule-no-dropping-i": "3.0.0",
         "@textlint-ja/textlint-rule-no-insert-dropping-sa": "2.0.1",
         "@textlint-ja/textlint-rule-no-insert-re": "1.0.2",
@@ -25,9 +25,9 @@
     },
   },
   "packages": {
-    "@ark/schema": ["@ark/schema@0.56.2", "", { "dependencies": { "@ark/util": "0.56.2" } }, "sha512-Qx4D2JFbBWpntiHZaTv7bGG4H/M2rigiknezKg/WVyDSaLdE4YCcWAOoFB7pjjDqHbbV2OqRfntm1nnXvwMexg=="],
+    "@ark/schema": ["@ark/schema@0.56.7", "", { "dependencies": { "@ark/util": "0.56.7" } }, "sha512-jmoOJlYIc4k1uv8oYBDNOFnAsKk2a2D9t/D6npF2JUfW4ecPB0v6ce6lruKg7lkBxIBA8Z7UtxfmvephYbhUGQ=="],
 
-    "@ark/util": ["@ark/util@0.56.2", "", {}, "sha512-9kU2sUE38FZEGG7l3hamYMBieLYEJh2L1mrYD2eXpT+78EnQSV1bhjxJhnxGBMSTbtwpBSDNSK+K60WvaI/DTQ=="],
+    "@ark/util": ["@ark/util@0.56.7", "", {}, "sha512-z8pVnrPk/x9GC18yOp5wCe8rR2+Z6us4CTSg7dvxdsDLuA2xXYq+QETD1fO6f3fMuXe+PCjpvtCnhTW9RHLgEw=="],
 
     "@azu/format-text": ["@azu/format-text@1.0.2", "", {}, "sha512-Swi4N7Edy1Eqq82GxgEECXSSLyn6GOb5htRFPzBDdUkECGXtlf12ynO5oJSpWKPwCaUssOu7NfhDcCWpIC6Ywg=="],
 
@@ -47,17 +47,17 @@
 
     "@cacheable/utils": ["@cacheable/utils@2.5.0", "", { "dependencies": { "hashery": "^1.5.1", "keyv": "^5.6.0" } }, "sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA=="],
 
-    "@cffnpwr/textlint-rule-no-arbitrary-line-break": ["@cffnpwr/textlint-rule-no-arbitrary-line-break@1.1.0", "", { "dependencies": { "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": "1.1.0", "arktype": "2.2.3" }, "peerDependencies": { "textlint": ">=15.0.0" } }, "sha512-Z6yY2dQOLDY6nkeJmkk0HVvD6aYrvwOnkXTqEdyt/eXSHcWahx8yHYDQyLq5DbXvsmgjgE2+/loNQdyDYuVk+w=="],
+    "@cffnpwr/textlint-rule-no-arbitrary-line-break": ["@cffnpwr/textlint-rule-no-arbitrary-line-break@1.1.1", "", { "dependencies": { "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": "1.2.0", "arktype": "2.2.8" }, "peerDependencies": { "textlint": ">=15.0.0" } }, "sha512-NJbriFWPyRLAp8medh3+SNPiPHO/vzu9bzcw0413EBZmLuUBeM7sfuu/DKXzd+7UOfuEm/GSeBzgMYMy0ccp4g=="],
 
-    "@cffnpwr/textlint-rule-no-dash": ["@cffnpwr/textlint-rule-no-dash@1.1.0", "", { "dependencies": { "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": "1.1.0", "@textlint/regexp-string-matcher": "2.0.2", "arktype": "2.2.3", "ts-pattern": "5.9.0" }, "peerDependencies": { "textlint": ">=15.0.0" } }, "sha512-UYgz5yYDZjr6Mr7t/P5UPpPc8xcKHsafXT1TenQMSsgV0tVWY1OYZwLH8xJU2Tuearj5sj2jHtl679JWCcojdw=="],
+    "@cffnpwr/textlint-rule-no-dash": ["@cffnpwr/textlint-rule-no-dash@1.1.1", "", { "dependencies": { "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": "1.2.0", "@textlint/regexp-string-matcher": "2.0.2", "arktype": "2.2.8", "ts-pattern": "5.9.2" }, "peerDependencies": { "textlint": ">=15.0.0" } }, "sha512-2LZgfO9pLZMx+5eoCKbtOzWCe9osNQgUM+gpkx/aMFAFSPIY/kkW8v2afjBvDGardebC6vcnEJAfXWjQ+DhZ9g=="],
 
-    "@cffnpwr/textlint-rule-no-doubled-additive-conjunction": ["@cffnpwr/textlint-rule-no-doubled-additive-conjunction@1.1.0", "", { "dependencies": { "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": "1.1.0", "arktype": "2.2.3", "sentence-splitter": "5.0.1" }, "peerDependencies": { "textlint": ">=15.0.0" } }, "sha512-8WY1Je4rSfWNymaU/N20bPhIdUaP3wO7FBVU+8qorJaxkoOtLzw3feCtA0UC6lVYY1TeR/KK+xcL3fx/4nFIiA=="],
+    "@cffnpwr/textlint-rule-no-doubled-additive-conjunction": ["@cffnpwr/textlint-rule-no-doubled-additive-conjunction@1.1.1", "", { "dependencies": { "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": "1.2.0", "arktype": "2.2.8", "sentence-splitter": "5.0.1" }, "peerDependencies": { "textlint": ">=15.0.0" } }, "sha512-wGXyWpwIBqma5q0hKClAeiCrJZojI35xPGxcpUbbATVr9pLABnhODxLxRuNiB2yTih55E8fE++hwDk8oo5RQiw=="],
 
-    "@cffnpwr/textlint-rule-preset-ja-writing-extras": ["@cffnpwr/textlint-rule-preset-ja-writing-extras@1.1.0", "", { "dependencies": { "@cffnpwr/textlint-rule-no-arbitrary-line-break": "1.1.0", "@cffnpwr/textlint-rule-no-dash": "1.1.0", "@cffnpwr/textlint-rule-no-doubled-additive-conjunction": "1.1.0", "@cffnpwr/textlint-rule-sentence-per-line": "1.1.0" } }, "sha512-zQTlZjOCbln5+K2tJOuuUAJpL4xqqQD4MWILeE+zlUdSZg3tl8BFjVS29NqOgTS+5kqxs7//R8XsBmq+6IpOrg=="],
+    "@cffnpwr/textlint-rule-preset-ja-writing-extras": ["@cffnpwr/textlint-rule-preset-ja-writing-extras@1.1.1", "", { "dependencies": { "@cffnpwr/textlint-rule-no-arbitrary-line-break": "1.1.1", "@cffnpwr/textlint-rule-no-dash": "1.1.1", "@cffnpwr/textlint-rule-no-doubled-additive-conjunction": "1.1.1", "@cffnpwr/textlint-rule-sentence-per-line": "1.2.0" } }, "sha512-Wtsir2XUG1IzDAebObDrCPIJsxzf45MegwR0ro9774BIl1m39mg5BF46ioZ96AyISP/P+p0ZHLRpUYFtGM4/Ig=="],
 
-    "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": ["@cffnpwr/textlint-rule-preset-ja-writing-extras-shared@1.1.0", "", { "dependencies": { "textlint-util-to-string": "3.3.4", "unist-util-map": "4.0.0" } }, "sha512-zHrI8yVqZKO6AGddANixzzYMWf3ArdQYRWKCVHUXh/7EdBs+mOkQelJLXMrP/oc4TbM9wtVj/v9d8NFFwcl+rQ=="],
+    "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": ["@cffnpwr/textlint-rule-preset-ja-writing-extras-shared@1.2.0", "", { "dependencies": { "textlint-util-to-string": "3.3.4", "unist-util-map": "4.0.0" } }, "sha512-+nDw8dOcQ+sEh9aX0ik2AD5jz6slC8P38NUMe4WypM8AX26R+22ZdEpvwSduREoRiIFwuTbctEbh0IeHu2xZNg=="],
 
-    "@cffnpwr/textlint-rule-sentence-per-line": ["@cffnpwr/textlint-rule-sentence-per-line@1.1.0", "", { "dependencies": { "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": "1.1.0", "arktype": "2.2.3", "sentence-splitter": "5.0.1" }, "peerDependencies": { "textlint": ">=15.0.0" } }, "sha512-HrRbXRVNoOA1C0In27Je6w6Z4MB1jZiGrkNLImaEiBP+UiYM1oCLkbNt29elaBWglox711je9PwsEiOMydLdJQ=="],
+    "@cffnpwr/textlint-rule-sentence-per-line": ["@cffnpwr/textlint-rule-sentence-per-line@1.2.0", "", { "dependencies": { "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared": "1.2.0", "arktype": "2.2.8", "sentence-splitter": "5.0.1" }, "peerDependencies": { "textlint": ">=15.0.0" } }, "sha512-Mw9F3mW3mCXrudMspH0WWG7IhRXEQZJVjm0O2V2syHAyfn91Rn2hwkynGrRV6JPoRLbah9vkhPO1euCbihEUOg=="],
 
     "@keyv/bigmap": ["@keyv/bigmap@1.3.1", "", { "dependencies": { "hashery": "^1.4.0", "hookified": "^1.15.0" }, "peerDependencies": { "keyv": "^5.6.0" } }, "sha512-WbzE9sdmQtKy8vrNPa9BRnwZh5UF4s1KTmSK0KUVLo3eff5BlQNNWDnFOouNpKfPKDnms9xynJjsMYjMaT/aFQ=="],
 
@@ -147,9 +147,9 @@
 
     "argparse": ["argparse@2.0.1", "", {}, "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="],
 
-    "arkregex": ["arkregex@0.0.8", "", { "dependencies": { "@ark/util": "0.56.2" } }, "sha512-PJcx6G1kQTgLKPUbeYlYecDRaKq15AMSGVajlKFYWlPeJRQL+j3dKE6tyMs40HZ99djS1l9Vhl3ezAHy9JBIqQ=="],
+    "arkregex": ["arkregex@0.0.13", "", { "dependencies": { "@ark/util": "0.56.7" } }, "sha512-c17sqCqiiZauxyoU1KZ2zbzCgeghGmc8dR2CrdQnlEtpq3bLhRLoLrxTL52M/8yQD8e/i1/IBRpRCNAuqJa7xQ=="],
 
-    "arktype": ["arktype@2.2.3", "", { "dependencies": { "@ark/schema": "0.56.2", "@ark/util": "0.56.2", "arkregex": "0.0.8" } }, "sha512-7W+0RLTUNJiBFIIZXwOQxSR8Z273IAd6IvqBeG9+gHnQKFsIx2C0iOtGTmMrPnlX4qLXyc5+ll7A0BIj9WrbTg=="],
+    "arktype": ["arktype@2.2.8", "", { "dependencies": { "@ark/schema": "0.56.7", "@ark/util": "0.56.7", "arkregex": "0.0.13" } }, "sha512-tZyLza7kO2vN8BXBKcj4t43IVMe8/ZyqlITH0chZv7FfEw+edLovpY922tqcK4mCjTpf4oNo2xV6np7tquP1ww=="],
 
     "array-buffer-byte-length": ["array-buffer-byte-length@1.0.2", "", { "dependencies": { "call-bound": "^1.0.3", "is-array-buffer": "^3.0.5" } }, "sha512-LHE+8BuR7RYGDKvnrmcuSq3tDcKv9OFEXQt/HpbZhY7V6h0zlUXutnAD82GiFx9rdieCMjkvtcsPqBwgUl1Iiw=="],
 
@@ -751,7 +751,7 @@
 
     "trough": ["trough@1.0.5", "", {}, "sha512-rvuRbTarPXmMb79SmzEp8aqXNKcK+y0XaB298IXueQ8I2PsrATcPBCSPyK/dDNa2iWOhKlfNnOjdAOTBU/nkFA=="],
 
-    "ts-pattern": ["ts-pattern@5.9.0", "", {}, "sha512-6s5V71mX8qBUmlgbrfL33xDUwO0fq48rxAu2LBE11WBeGdpCPOsXksQbZJHvHwhrd3QjUusd3mAOM5Gg0mFBLg=="],
+    "ts-pattern": ["ts-pattern@5.9.2", "", {}, "sha512-qAf+7M7Jjk7uebZeIo9uEzyintfuRtgHdzM9dqxRKcMi2dt76Ec+FH2wW3bnU9TuGLkZIJLoLs7cCQnU7Tu8ig=="],
 
     "type-check": ["type-check@0.4.0", "", { "dependencies": { "prelude-ls": "^1.2.1" } }, "sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew=="],
 
