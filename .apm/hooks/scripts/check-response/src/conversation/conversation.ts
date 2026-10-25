@@ -8,6 +8,10 @@ const jsonLine = type("string.json.parse");
 export const EMPTY_CONVERSATION: Conversation = { kind: "no-user-message", events: [] };
 
 export type ConversationEvent = { kind: "user-message"; text: string; }
+  // ターンの途中に届いたユーザーの発言
+  | { kind: "additional-user-message"; text: string; }
+  // ユーザーへの質問に対する回答
+  | { kind: "user-answer"; text: string; }
   | {
     kind: "tool-call";
     callId: string | undefined;
@@ -23,7 +27,7 @@ export type ConversationEvent = { kind: "user-message"; text: string; }
 export type TranscriptItem = ConversationEvent
   | { kind: "tool-result"; callId: string; text: string; };
 
-export type HistoryEntry = Extract<ConversationEvent, { kind: "user-message" | "response"; }>;
+export type HistoryEntry = Extract<ConversationEvent, { kind: "user-message" | "additional-user-message" | "user-answer" | "response"; }>;
 
 export type PreviousToolCall = Pick<Extract<ConversationEvent, { kind: "tool-call"; }>, "name" | "input" | "result">;
 
@@ -45,9 +49,9 @@ export type Conversation = {
 
 const historyEntriesOf = (
   events: ConversationEvent[],
-): HistoryEntry[] => events.filter(
-  (event): event is HistoryEntry => event.kind === "user-message" || event.kind === "response",
-);
+): HistoryEntry[] => events.flatMap((event) => match(event)
+  .with({ kind: P.union("user-message", "additional-user-message", "user-answer", "response") }, (entry) => [entry])
+  .otherwise(() => []));
 
 export const historyOf = (
   conversation: Conversation,
@@ -107,7 +111,7 @@ const appendItem = (
     events: [event],
   }))
   .with({ kind: "tool-result" }, ({ callId, text }) => withToolResult(conversation, callId, text))
-  .with({ kind: P.union("tool-call", "hook-feedback", "response") }, (event): Conversation => ({
+  .with({ kind: P.union("additional-user-message", "user-answer", "tool-call", "hook-feedback", "response") }, (event): Conversation => ({
     ...conversation,
     events: [...conversation.events, event],
   }))

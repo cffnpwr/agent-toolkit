@@ -92,6 +92,31 @@ describe("conversationFromJsonl", () => {
     });
   });
 
+  it("[positive] 作業中の発言・質問への回答はターンを区切らずに出来事に加え、次のターンで履歴にする", () => {
+    const content = [
+      { kind: "user-message", text: "1つ目の依頼" },
+      { kind: "additional-user-message", text: "追加の指示" },
+      { kind: "user-answer", text: "質問: 回答" },
+      { kind: "response", text: "1つ目の応答" },
+      { kind: "user-message", text: "2つ目の依頼" },
+    ].map((item) => JSON.stringify(item)).join("\n");
+
+    const conversation = conversationFromJsonl(content, itemsOf);
+
+    expect(conversation).toEqual({
+      kind: "after-user-message",
+      userMessageLine: 4,
+      history: [
+        { kind: "user-message", text: "1つ目の依頼" },
+        { kind: "additional-user-message", text: "追加の指示" },
+        { kind: "user-answer", text: "質問: 回答" },
+        { kind: "response", text: "1つ目の応答" },
+      ],
+      previousToolCalls: [],
+      events: [{ kind: "user-message", text: "2つ目の依頼" }],
+    });
+  });
+
   it("[negative] 前のターンが無いとき、履歴を空にする", () => {
     const content = [
       { kind: "user-message", text: "依頼" },

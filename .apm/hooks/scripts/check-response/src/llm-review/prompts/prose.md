@@ -16,8 +16,14 @@
 ## 入力
 
 査読の対象は、会話（`<conversation>`）の中の`<response-to-review>`だけです。
-会話の`<user-message>`（ユーザーの発言）と`<hook-feedback>`（このhookの差し戻し）は、会話の文脈として読み、査読の対象にしません。
-会話の前の`<earlier-turns>`は、それより前のターンの発言（`<user-message>`）と応答（`<response>`）です。
+会話の次の要素は、会話の文脈として読み、査読の対象にしません。
+
+- `<user-message>`（ユーザーの発言）
+- `<additional-user-message>`（作業中にユーザーが送った発言）
+- `<user-answer>`（エージェントの質問へのユーザーの回答）
+- `<hook-feedback>`（このhookの差し戻し）
+
+会話の前の`<earlier-turns>`は、それより前のターンの発言（`<user-message>`・`<additional-user-message>`・`<user-answer>`）と応答（`<response>`）です。
 これも会話の文脈としてだけ読み、査読の対象にしません。
 応答のコードブロックは`[コードブロック省略]`に置き換えてあります。
 ツール呼び出しは入力に含みません。

@@ -45,6 +45,18 @@ const toolResultMessage = type({
   message: { content: "unknown[]" },
 });
 
+// 質問文をキー、回答を値とするAskUserQuestionの結果
+const userAnswerMessage = type({
+  type: "'user'",
+  message: { content: "unknown[]" },
+  toolUseResult: { answers: "Record<string, string>" },
+});
+
+const additionalUserMessage = type({
+  type: "'attachment'",
+  attachment: { type: "'queued_command'", prompt: "string", origin: { kind: "'human'" } },
+});
+
 const textOf = (value: string | unknown[]): string => match(value)
   .with(P.string, (text) => text)
   .otherwise((blocks) => blocks.flatMap((block) => (textBlock.allows(block) ? [block.text] : [])).join("\n"));
@@ -71,6 +83,12 @@ const toolResultItems = (
     .when(toolResultBlock.allows, ({ tool_use_id, content }) => [{ kind: "tool-result", callId: tool_use_id, text: textOf(content ?? "") }])
     .otherwise(() => []));
 
+const userAnswerText = (
+  answers: Record<string, string>,
+): string => Object.entries(answers)
+  .map(([question, answer]) => `${question}: ${answer}`)
+  .join("\n");
+
 const itemsOf = (
   entry: unknown,
 ): TranscriptItem[] => match<unknown, TranscriptItem[]>(entry)
@@ -81,6 +99,11 @@ const itemsOf = (
     assistantMessage.allows,
     ({ message }) => assistantItems(message.content),
   )
+  .when(userAnswerMessage.allows, ({ message, toolUseResult }) => [
+    ...toolResultItems(message.content),
+    { kind: "user-answer", text: userAnswerText(toolUseResult.answers) },
+  ])
+  .when(additionalUserMessage.allows, ({ attachment }) => [{ kind: "additional-user-message", text: attachment.prompt }])
   .when(
     toolResultMessage.allows,
     ({ message }) => toolResultItems(message.content),

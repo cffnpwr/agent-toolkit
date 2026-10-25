@@ -82,6 +82,8 @@ const toTag = (
   responseTagName: string,
 ): string => match(event)
   .with({ kind: "user-message" }, ({ text }) => tag("user-message", text))
+  .with({ kind: "additional-user-message" }, ({ text }) => tag("additional-user-message", text))
+  .with({ kind: "user-answer" }, ({ text }) => tag("user-answer", text))
   .with({ kind: "tool-call" }, ({ name, input, result }) => toolCallTag(name, input, result))
   .with({ kind: "hook-feedback" }, ({ text }) => tag("hook-feedback", text))
   .with({ kind: "response" }, ({ text }) => tag(responseTagName, text))
@@ -102,7 +104,7 @@ const reviewedResponseTags = (
   .exhaustive();
 
 const historyTextOf = (entry: HistoryEntry): HistoryEntry => match(entry)
-  .with({ kind: "user-message" }, (userMessage) => userMessage)
+  .with({ kind: P.union("user-message", "additional-user-message", "user-answer") }, (userEntry) => userEntry)
   .with({ kind: "response" }, ({ text }): HistoryEntry => ({ kind: "response", text: withoutCodeBlocks(text) }))
   .exhaustive();
 

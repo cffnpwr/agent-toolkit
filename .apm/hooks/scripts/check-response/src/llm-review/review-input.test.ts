@@ -101,6 +101,43 @@ describe("toProseReviewInput", () => {
     ].join("\n"));
   });
 
+  it("[positive] 作業中の発言・質問への回答を、会話と前のターンの文脈にそれぞれのタグで入れる", () => {
+    const conversation: Conversation = {
+      kind: "after-user-message",
+      userMessageLine: 3,
+      history: [{ kind: "user-message", text: "前の依頼" }, { kind: "user-answer", text: "前の質問: 前の回答" }, { kind: "additional-user-message", text: "前の追加の指示" }],
+      previousToolCalls: [],
+      events: [
+        { kind: "user-message", text: "依頼" },
+        { kind: "additional-user-message", text: "追加の指示" },
+        { kind: "user-answer", text: "質問: 回答" },
+        { kind: "response", text: "応答" },
+      ],
+    };
+
+    const input = toProseReviewInput({
+      conversation,
+      confirmedFindings: [],
+      findingsToJudge: [],
+    });
+
+    expect(input).toBe([
+      "<earlier-turns>",
+      "<user-message>\n前の依頼\n</user-message>",
+      "<user-answer>\n前の質問: 前の回答\n</user-answer>",
+      "<additional-user-message>\n前の追加の指示\n</additional-user-message>",
+      "</earlier-turns>",
+      "<conversation>",
+      "<user-message>\n依頼\n</user-message>",
+      "<additional-user-message>\n追加の指示\n</additional-user-message>",
+      "<user-answer>\n質問: 回答\n</user-answer>",
+      "<response-to-review>\n応答\n</response-to-review>",
+      "</conversation>",
+      "<textlint-findings-already-reported></textlint-findings-already-reported>",
+      "<textlint-findings-to-judge></textlint-findings-to-judge>",
+    ].join("\n"));
+  });
+
   it.each<{ name: string; history: HistoryEntry[]; want: string[]; }>([
     {
       name: "合計が12000文字",

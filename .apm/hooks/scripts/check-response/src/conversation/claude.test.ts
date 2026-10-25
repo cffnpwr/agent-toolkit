@@ -167,6 +167,61 @@ describe("parseClaudeTranscript", () => {
     expect(conversation).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
   });
 
+  it("[positive] AskUserQuestionの結果を呼び出しの結果に加え、質問と回答を回答の出来事として取り出す", () => {
+    const content = [
+      { type: "user", origin: { kind: "human" }, message: { role: "user", content: "依頼" } },
+      { type: "assistant", message: { role: "assistant", content: [{ type: "tool_use", id: "toolu_1", name: "AskUserQuestion", input: {} }] } },
+      {
+        type: "user",
+        message: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: "The user answered" }] },
+        toolUseResult: { questions: [], answers: { "pushしますか。": "push済", "方式は。": "A" } },
+      },
+    ].map((entry) => JSON.stringify(entry)).join("\n");
+
+    const conversation = parseClaudeTranscript(content);
+
+    expect(conversation).toEqual({
+      kind: "after-user-message",
+      userMessageLine: 0,
+      history: [],
+      previousToolCalls: [],
+      events: [
+        { kind: "user-message", text: "依頼" },
+        { kind: "tool-call", callId: "toolu_1", name: "AskUserQuestion", input: "{}", result: "The user answered" },
+        { kind: "user-answer", text: "pushしますか。: push済\n方式は。: A" },
+      ],
+    });
+  });
+
+  it("[positive] 作業中にユーザーが送った発言を、ターンを区切らない発言として取り出す", () => {
+    const content = [
+      { type: "user", origin: { kind: "human" }, message: { role: "user", content: "PRを作成して" } },
+      { type: "attachment", attachment: { type: "queued_command", prompt: "OK", origin: { kind: "human" }, humanTurn: true } },
+    ].map((entry) => JSON.stringify(entry)).join("\n");
+
+    const conversation = parseClaudeTranscript(content);
+
+    expect(conversation).toEqual({
+      kind: "after-user-message",
+      userMessageLine: 0,
+      history: [],
+      previousToolCalls: [],
+      events: [{ kind: "user-message", text: "PRを作成して" }, { kind: "additional-user-message", text: "OK" }],
+    });
+  });
+
+  it("[negative] ユーザー以外が送った作業中のメッセージは取り出さない", () => {
+    const content = [
+      { type: "user", origin: { kind: "human" }, message: { role: "user", content: "依頼" } },
+      { type: "attachment", attachment: { type: "queued_command", prompt: "<task-notification>", commandMode: "task-notification" } },
+      { type: "attachment", attachment: { type: "queued_command", prompt: "<agent-message>", origin: { kind: "peer" } } },
+    ].map((entry) => JSON.stringify(entry)).join("\n");
+
+    const conversation = parseClaudeTranscript(content);
+
+    expect(conversation).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
+  });
+
   it("[negative] 書き込み途中の行・空行は読み飛ばす", () => {
     const content = [
       JSON.stringify({ type: "user", origin: { kind: "human" }, message: { role: "user", content: "依頼" } }),
