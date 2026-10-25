@@ -31,7 +31,7 @@
     "@textlint-ja/no-dropping-i": true,
     "@textlint-ja/no-insert-dropping-sa": true,
     "prh": {
-      "rulePaths": [".prh.yml"]
+      "rulePaths": [".prh.yaml"]
     }
   }
 }
