@@ -1,0 +1,14 @@
+[install]
+minimumReleaseAge = 259200 # 3 days in seconds
+# Our own packages: releases are trusted immediately
+minimumReleaseAgeExcludes = [
+  "@cffnpwr/tsconfig",
+  "@cffnpwr/eslint-config",
+  "@cffnpwr/textlint-config",
+  "@cffnpwr/textlint-rule-preset-ja-writing-extras",
+  "@cffnpwr/textlint-rule-preset-ja-writing-extras-shared",
+  "@cffnpwr/textlint-rule-no-arbitrary-line-break",
+  "@cffnpwr/textlint-rule-no-dash",
+  "@cffnpwr/textlint-rule-no-doubled-additive-conjunction",
+  "@cffnpwr/textlint-rule-sentence-per-line",
+]
