@@ -1,21 +1,12 @@
-# Rust のテスト
+# Rust
 
-言語非依存の方針（[SKILL.md](../SKILL.md)）を前提に、Rust 固有の手順を示す。
+## テストの配置
 
-## ランナーと実行
+- ユニットテストは対象コードと同じファイルの`#[cfg(test)] mod tests`に置き、`use super::*`でprivateな要素を取り込む
+- integrationテストはクレート直下の`tests/`に置き、public APIのみを検証する
+- privateな要素を検証する目的でpublicにしない
 
-標準の `cargo test` を使う。
-
-```sh
-cargo test                 # 全テスト
-cargo test <name>          # 名前に <name> を含むテストのみ
-cargo test -- --nocapture  # println! 等の標準出力を表示
-```
-
-## 配置
-
-- **unit テスト**: 対象コードと同じファイルの末尾に `#[cfg(test)] mod tests` を置く。`tests` は子モジュールで、子モジュールは祖先モジュールの private 要素に到達できるため（`use super::*` で取り込む）、ロジックを持つ private もテストできる。
-- **integration テスト**: クレート直下の `tests/` に置く。クレートを外部から使う視点で public API のみを検証する。
+### 良い例
 
 ```rust
 // src/foo.rs
@@ -25,39 +16,96 @@ fn parse(input: &str) -> Result<u32, ParseError> { /* ... */ }
 mod tests {
     use super::*;
 
-    // Given-When-Then
     #[test]
     fn positive_parses_digits_into_number() {
-        let input = "42";                 // Given
-        let result = parse(input);        // When
-        assert_eq!(result, Ok(42));       // Then
-    }
+        let input = "42";
 
-    #[test]
-    fn negative_returns_empty_error_when_input_is_empty() {
-        let result = parse("");
-        // 型（バリアント）まで検証する。メッセージは見ない
-        assert!(matches!(result, Err(ParseError::Empty)));
+        let result = parse(input);
+
+        assert_eq!(result, Ok(42));
     }
 }
 ```
 
-命名は `positive_` / `negative_` を prefix に付け、以降は検証内容がわかる snake_case にする。
+### 悪い例
 
-- **正常系は期待値全体との完全一致で検証する。** `assert_eq!(result, Ok(expected))` で結果全体を突き合わせる（構造体は `#[derive(PartialEq, Debug)]` が要る。`Result` を直接比較する場合は `E` にも `PartialEq` + `Debug` が要る）。フィールドごとに `assert_eq!` を並べない。
-  - `E` が `PartialEq` / `Debug` を持たない場合は `assert_eq!(result.ok(), Some(expected))` とする。`.ok()` で `Result<T, E>` を `Option<T>` に落とし、`Ok` であることと内容一致を一度に検査でき、制約が `T` だけに下がる。ただし失敗時の出力は `None` となりエラー内容は見えない。
-- **異常系はエラーのバリアントまで検証する。** `matches!(result, Err(ParseError::Empty))` でバリアントを検査する。メッセージ文言は検証しない。パニックを検証する場合は `#[should_panic(expected = "...")]`。
-- `?` を使いたい場合は `Result<(), E>` 返却のテストにする。
+```rust
+// src/foo.rs
+pub fn parse(input: &str) -> Result<u32, ParseError> { /* ... */ }
 
-## ケース展開（二層）
+// tests/foo.rs
+use mycrate::foo::parse;
+```
 
-### 基本: 素の `#[test]` 関数を複数
+## 命名
 
-ロジックやセットアップが異なるケースは、ケースごとに独立した `#[test]` 関数で書く。
+テスト関数名は`positive_`・`negative_`をprefixにし、検証内容をsnake_caseで書く。
 
-### 同一ロジックを複数入力で回す場合: `rstest` の `#[case]`
+### 良い例
 
-同じ検証ロジックを入力だけ変えて回すケースは、`rstest` でパラメタライズする。各 `#[case]` は独立したテストとして生成・命名・実行される。
+```rust
+#[test]
+fn positive_parses_digits_into_number() {}
+
+#[test]
+fn negative_returns_empty_error_when_input_is_empty() {}
+```
+
+### 悪い例
+
+```rust
+#[test]
+fn test_parse() {}
+```
+
+## 正常系の検証
+
+- `assert_eq!`で結果全体を比較する
+- 比較する型には`#[derive(PartialEq, Debug)]`を付ける
+- エラー型が`PartialEq`・`Debug`を実装しない場合は、`result.ok()`を`Some(expected)`と比較する
+
+### 良い例
+
+```rust
+let result = parse_config(text);
+assert_eq!(result, Ok(Config { limit: 10, min_size: 0 }));
+```
+
+### 悪い例
+
+```rust
+let config = parse_config(text).unwrap();
+assert_eq!(config.limit, 10);
+assert_eq!(config.min_size, 0);
+```
+
+## 異常系の検証
+
+- `matches!`でエラーのバリアントを検証する
+- エラーメッセージは検証しない
+
+### 良い例
+
+```rust
+let result = parse("");
+assert!(matches!(result, Err(ParseError::Empty)));
+```
+
+### 悪い例
+
+```rust
+let result = parse("");
+assert_eq!(result.unwrap_err().to_string(), "input is empty");
+```
+
+## パラメタライズ
+
+- 同じ検証を入力だけ変えて実行する場合は、`rstest`の`#[case]`を使う
+- ケース名は`#[case::<name>(...)]`で付け、`positive_`・`negative_`をprefixにする
+- 共通の準備は`#[fixture]`関数に分離する
+- 検証や準備が異なるケースは、別の`#[test]`関数にする
+
+### 良い例
 
 ```rust
 use rstest::rstest;
@@ -71,32 +119,47 @@ fn fibonacci_returns_expected(#[case] input: u32, #[case] expected: u32) {
 }
 ```
 
-`#[case::<name>(...)]` でケース名を付け、正常系・異常系を `positive_` / `negative_` で区別する。共通の準備は `#[fixture]` 関数に切り出して引数で受け取る。
+### 悪い例
 
-`Cargo.toml`（版は執筆時点の最新。実際には最新版を確認して指定する）:
-
-```toml
-[dev-dependencies]
-rstest = "0.26"
+```rust
+#[test]
+fn positive_fibonacci_returns_expected() {
+    for (input, expected) in [(0, 0), (1, 1), (10, 55)] {
+        assert_eq!(fibonacci(input), expected);
+    }
+}
 ```
 
 ## 非同期テスト
 
-`async fn` のテストは素の `#[test]` では実行できない（コンパイルが通らない）。非同期ランタイムに応じたテスト属性を使う。tokio なら `#[tokio::test]`。
+- `async fn`のテストには、プロジェクトの非同期ランタイムのテスト属性（tokioなら`#[tokio::test]`）を使う
+- `rstest`と併用する場合は、`#[rstest]`と非同期ランタイムのテスト属性の両方を付ける
+
+### 良い例
 
 ```rust
 #[tokio::test]
 async fn positive_fetches_and_parses() {
     let result = fetch_and_parse("id").await;
-    assert!(result.is_ok());
+    assert_eq!(result, Ok(Article { id: 1 }));
 }
 ```
 
-`rstest` でパラメタライズする場合も、`#[rstest]` と非同期ランタイム属性を併用し、テスト関数を `async fn` にする。使う属性は対象プロジェクトのランタイムに合わせる。
+### 悪い例
 
-## 境界モック
+```rust
+#[test]
+async fn positive_fetches_and_parses() {
+    let result = fetch_and_parse("id").await;
+    assert_eq!(result, Ok(Article { id: 1 }));
+}
+```
 
-外部境界は trait で表し、テストでダブルに差し替える。生成には `mockall` を使う。
+## テストダブル
+
+プログラム外部へのアクセスはtraitで表し、テストダブルは`mockall`で生成する。
+
+### 良い例
 
 ```rust
 use mockall::automock;
@@ -110,33 +173,33 @@ trait Clock {
 fn negative_rejects_expired_token() {
     let mut clock = MockClock::new();
     clock.expect_now().return_const(2_000u64);
-    // clock を対象へ注入して検証する
+    // clockを対象へ注入して検証する
 }
 ```
 
-`Cargo.toml`（版は執筆時点の最新。実際には最新版を確認して指定する）:
+### 悪い例
 
-```toml
-[dev-dependencies]
-mockall = "0.15"
+```rust
+fn is_expired(token: &Token) -> bool {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    token.expires_at < now
+}
 ```
-
-内部モジュール同士はモックせず実物で繋ぐ。境界を差し替えられない場合は、依存を trait 境界へ寄せる設計を検討する。
 
 ## カバレッジ
 
-`cargo-llvm-cov` を使う。
+- カバレッジは`cargo-llvm-cov`で計測する
+  - nightlyのRustを使用している場合は`--branch`をつけてC1カバレッジを計測する
+  - stableでは手動でC1カバレッジを担保する
+
+### 良い例
 
 ```sh
-cargo llvm-cov                      # 要約を表示
-cargo llvm-cov --html               # HTML レポート
-cargo llvm-cov --lcov --output-path lcov.info  # CI 向け lcov
+cargo +nightly llvm-cov --branch
 ```
 
-stable では **region coverage**（行より細かく条件領域を追う）が既定。真の分岐カバレッジ（C1）は nightly Rust で `--branch` を付けると得られるが、この機能は unstable。
+### 悪い例
 
 ```sh
-cargo +nightly llvm-cov --branch    # C1（unstable, nightly 限定）
+cargo llvm-cov
 ```
-
-stable で C1 を担保する場合は、SKILL.md の「C1 を求められたときの手順」に従い、各分岐の真・偽双方を通すケースを人手で用意する。
