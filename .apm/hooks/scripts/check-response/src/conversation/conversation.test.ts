@@ -15,7 +15,7 @@ describe("conversationFromJsonl", () => {
     entry: unknown,
   ): TranscriptItem[] => [entry as TranscriptItem];
 
-  it("[positive] 最後の発言より前の発言と応答を、発生順に履歴にする", () => {
+  it("[positive] 最後の発言より前の発言と応答を発生順に履歴にし、直前のターンのツール呼び出しの名前と入力を残す", () => {
     const content = [
       { kind: "response", text: "発言より前の応答" },
       { kind: "user-message", text: "前の依頼" },
@@ -38,7 +38,34 @@ describe("conversationFromJsonl", () => {
         { kind: "response", text: "前の途中の応答" },
         { kind: "response", text: "前の応答" },
       ],
+      previousToolCalls: [{ name: "Bash", input: "{}" }],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "応答" }],
+    });
+  });
+
+  it("[positive] ツール呼び出しが2つ前のターンにだけあるとき、直前のターンのツール呼び出しを空にする", () => {
+    const content = [
+      { kind: "user-message", text: "1つ目の依頼" },
+      { kind: "tool-call", callId: "c1", name: "Bash", input: "{}", result: "ok" },
+      { kind: "response", text: "1つ目の応答" },
+      { kind: "user-message", text: "2つ目の依頼" },
+      { kind: "response", text: "2つ目の応答" },
+      { kind: "user-message", text: "3つ目の依頼" },
+    ].map((item) => JSON.stringify(item)).join("\n");
+
+    const conversation = conversationFromJsonl(content, itemsOf);
+
+    expect(conversation).toEqual({
+      kind: "after-user-message",
+      userMessageLine: 5,
+      history: [
+        { kind: "user-message", text: "1つ目の依頼" },
+        { kind: "response", text: "1つ目の応答" },
+        { kind: "user-message", text: "2つ目の依頼" },
+        { kind: "response", text: "2つ目の応答" },
+      ],
+      previousToolCalls: [],
+      events: [{ kind: "user-message", text: "3つ目の依頼" }],
     });
   });
 
@@ -60,6 +87,7 @@ describe("conversationFromJsonl", () => {
         { kind: "response", text: "1つ目の応答" },
         { kind: "user-message", text: "2つ目の依頼" },
       ],
+      previousToolCalls: [],
       events: [{ kind: "user-message", text: "3つ目の依頼" }],
     });
   });
@@ -76,6 +104,7 @@ describe("conversationFromJsonl", () => {
       kind: "after-user-message",
       userMessageLine: 0,
       history: [],
+      previousToolCalls: [],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "応答" }],
     });
   });
@@ -93,13 +122,14 @@ describe("reviewedResponseOf", () => {
         kind: "after-user-message",
         userMessageLine: 4,
         history: [{ kind: "response", text: "前の途中の応答" }, { kind: "response", text: "前の応答" }, { kind: "user-message", text: "応答の無い依頼" }],
+        previousToolCalls: [],
         events: [{ kind: "user-message", text: "依頼" }],
       },
       want: "前の応答",
     },
     {
       name: "履歴に応答が無い",
-      conversation: { kind: "after-user-message", userMessageLine: 0, history: [], events: [{ kind: "user-message", text: "依頼" }] },
+      conversation: { kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] },
       want: undefined,
     },
     {
@@ -118,6 +148,7 @@ describe("withLastAssistantMessage", () => {
       kind: "after-user-message",
       userMessageLine: 0,
       history: [{ kind: "response", text: "前の応答" }],
+      previousToolCalls: [],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "途中の応答" }, { kind: "tool-call", callId: "c1", name: "Bash", input: "{}", result: "ok" }],
     };
 
@@ -127,6 +158,7 @@ describe("withLastAssistantMessage", () => {
       kind: "after-user-message",
       userMessageLine: 0,
       history: [{ kind: "response", text: "前の応答" }],
+      previousToolCalls: [],
       events: [
         { kind: "user-message", text: "依頼" },
         { kind: "response", text: "途中の応答" },
@@ -137,7 +169,7 @@ describe("withLastAssistantMessage", () => {
   });
 
   it("[positive] 応答がまだ無いとき末尾に応答として加える", () => {
-    const conversation: Conversation = { kind: "after-user-message", userMessageLine: 0, history: [], events: [{ kind: "user-message", text: "依頼" }] };
+    const conversation: Conversation = { kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] };
 
     const result = withLastAssistantMessage(conversation, "最後の応答");
 
@@ -145,6 +177,7 @@ describe("withLastAssistantMessage", () => {
       kind: "after-user-message",
       userMessageLine: 0,
       history: [],
+      previousToolCalls: [],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "最後の応答" }],
     });
   });
@@ -154,6 +187,7 @@ describe("withLastAssistantMessage", () => {
       kind: "after-user-message",
       userMessageLine: 0,
       history: [],
+      previousToolCalls: [],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "途中の応答" }],
     };
 
@@ -163,6 +197,7 @@ describe("withLastAssistantMessage", () => {
       kind: "after-user-message",
       userMessageLine: 0,
       history: [],
+      previousToolCalls: [],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "途中の応答" }],
     });
   });
@@ -172,11 +207,11 @@ describe("withLastAssistantMessage", () => {
     { name: "undefined", message: undefined },
     { name: "空白だけ", message: " \n" },
   ])("[negative] 最後の応答が$nameのとき加えない", ({ message }) => {
-    const conversation: Conversation = { kind: "after-user-message", userMessageLine: 0, history: [], events: [{ kind: "user-message", text: "依頼" }] };
+    const conversation: Conversation = { kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] };
 
     const result = withLastAssistantMessage(conversation, message);
 
-    expect(result).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], events: [{ kind: "user-message", text: "依頼" }] });
+    expect(result).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
   });
 });
 

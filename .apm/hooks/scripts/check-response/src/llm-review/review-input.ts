@@ -3,9 +3,9 @@ import type { TxtNode } from "@textlint/ast-node-types";
 import { parse } from "@textlint/markdown-to-ast";
 import { match, P } from "ts-pattern";
 
-import type { Conversation, ConversationEvent, HistoryEntry } from "../conversation/conversation.ts";
+import type { Conversation, ConversationEvent, HistoryEntry, PreviousToolCall } from "../conversation/conversation.ts";
 
-import { historyOf, reviewedResponseOf } from "../conversation/conversation.ts";
+import { historyOf, previousToolCallsOf, reviewedResponseOf } from "../conversation/conversation.ts";
 
 const MAX_RESULT_LENGTH = 2_000;
 
@@ -13,6 +13,9 @@ const KEPT_EDGE_LENGTH = MAX_RESULT_LENGTH / 2;
 
 // 文章の査読に文脈として渡す前のターンの文字数の上限
 const MAX_HISTORY_LENGTH = 12_000;
+
+// 未確認事項の検査に渡す前のターンのツール呼び出しの入力の文字数の上限
+const MAX_PREVIOUS_TOOL_CALLS_LENGTH = 12_000;
 
 const CODE_BLOCK_PLACEHOLDER = "[コードブロック省略]";
 
@@ -26,7 +29,7 @@ export interface ReviewInputSource {
 }
 
 // 末尾に出る集計・エラーも残すため、先頭と末尾以外を省略
-const truncateResult = (
+const truncateToolText = (
   text: string,
 ): string => (text.length > MAX_RESULT_LENGTH
   ? [
@@ -65,7 +68,7 @@ const toolCallTag = (
 ): string => [
   `<tool-call name="${name}">`,
   tag("input", input),
-  ...(result === undefined ? [] : [tag("result", truncateResult(result))]),
+  ...(result === undefined ? [] : [tag("result", truncateToolText(result))]),
   "</tool-call>",
 ].join("\n");
 
@@ -99,19 +102,29 @@ const historyTextOf = (entry: HistoryEntry): HistoryEntry => match(entry)
   .exhaustive();
 
 // 新しいものから上限に収まる分だけを選択し、発生順に並べ替え
-const recentHistory = (history: HistoryEntry[]): HistoryEntry[] => {
-  const selected: HistoryEntry[] = [];
+const newestWithin = <T>(
+  items: T[],
+  lengthOf: (item: T) => number,
+  maxLength: number,
+): T[] => {
+  const selected: T[] = [];
   let length = 0;
-  for (const entry of history.map(historyTextOf).toReversed()) {
-    length += entry.text.length;
-    if (length > MAX_HISTORY_LENGTH) {
+  for (const item of items.toReversed()) {
+    length += lengthOf(item);
+    if (length > maxLength) {
       break;
     }
-    selected.push(entry);
+    selected.push(item);
   }
 
   return selected.toReversed();
 };
+
+const recentHistory = (history: HistoryEntry[]): HistoryEntry[] => newestWithin(
+  history.map(historyTextOf),
+  (entry) => entry.text.length,
+  MAX_HISTORY_LENGTH,
+);
 
 const historyTags = (
   history: HistoryEntry[],
@@ -140,6 +153,23 @@ export const toProseReviewInput = ({
   findingsTag("textlint-findings-to-judge", findingsToJudge),
 ].join("\n");
 
+// 実行結果は含めず、操作をしたかどうかの裏付けにだけ使う
+const previousToolCallTags = (
+  toolCalls: PreviousToolCall[],
+): string[] => match(newestWithin(
+  toolCalls.map(({ name, input }) => ({
+    name,
+    input: truncateToolText(input),
+  })),
+  ({ input }) => input.length,
+  MAX_PREVIOUS_TOOL_CALLS_LENGTH,
+))
+  .with([], () => [])
+  .otherwise((calls) => [tag(
+    "previous-turn-tool-calls",
+    calls.map(({ name, input }) => toolCallTag(name, input, undefined)).join("\n"),
+  )]);
+
 // 検査の対象は最後の応答のみで、それより前の応答は文脈
 export const toVerificationReviewInput = ({
   conversation,
@@ -152,6 +182,7 @@ export const toVerificationReviewInput = ({
 
   return [
     "<conversation>",
+    ...previousToolCallTags(previousToolCallsOf(conversation)),
     ...reviewedResponseTags(reviewedResponseOf(conversation)),
     ...events.map((event, index) => toTag(
       event,

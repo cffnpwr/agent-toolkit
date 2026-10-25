@@ -50,6 +50,7 @@ describe("toProseReviewInput", () => {
       kind: "after-user-message",
       userMessageLine: 0,
       history: [],
+      previousToolCalls: [],
       events: [
         { kind: "user-message", text: "テストを実行して" },
         { kind: "tool-call", callId: "c1", name: "Bash", input: "{\"command\":\"bun test\"}", result: "3 pass" },
@@ -76,6 +77,7 @@ describe("toProseReviewInput", () => {
       kind: "after-user-message",
       userMessageLine: 2,
       history: [{ kind: "user-message", text: "前の依頼" }, { kind: "response", text: "前の応答\n\n```\ncode\n```" }],
+      previousToolCalls: [],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "応答" }],
     };
 
@@ -111,7 +113,7 @@ describe("toProseReviewInput", () => {
       want: ["b".repeat(4000), "c".repeat(4000)],
     },
   ])("[positive] 前のターンの$nameとき、新しいものから12000文字以内に収まる分だけを発生順に入れる", ({ history, want }) => {
-    const conversation: Conversation = { kind: "after-user-message", userMessageLine: 3, history, events: [] };
+    const conversation: Conversation = { kind: "after-user-message", userMessageLine: 3, history, previousToolCalls: [], events: [] };
 
     const input = toProseReviewInput({
       conversation,
@@ -144,6 +146,7 @@ describe("toVerificationReviewInput", () => {
       kind: "after-user-message",
       userMessageLine: 0,
       history: [],
+      previousToolCalls: [],
       events: [
         { kind: "user-message", text: "依頼" },
         { kind: "response", text: "途中です。" },
@@ -192,6 +195,7 @@ describe("toVerificationReviewInput", () => {
       kind: "after-user-message",
       userMessageLine: 2,
       history: [{ kind: "user-message", text: "前の依頼" }, { kind: "response", text: "前の応答" }],
+      previousToolCalls: [],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "完了しました。" }],
     };
 
@@ -206,6 +210,75 @@ describe("toVerificationReviewInput", () => {
       "<reviewed-response>\n前の応答\n</reviewed-response>",
       "<user-message>\n依頼\n</user-message>",
       "<final-response>\n完了しました。\n</final-response>",
+      "</conversation>",
+      "<textlint-findings-already-reported></textlint-findings-already-reported>",
+    ].join("\n"));
+  });
+
+  it("[positive] 前のターンにツール呼び出しがあるとき、その名前と入力を結果なしで査読済みの応答より前に入れ、2000文字を超える入力を省略する", () => {
+    const conversation: Conversation = {
+      kind: "after-user-message",
+      userMessageLine: 3,
+      history: [{ kind: "user-message", text: "前の依頼" }, { kind: "response", text: "前の応答" }],
+      previousToolCalls: [
+        { name: "Bash", input: "{\"command\":\"ls\"}" },
+        { name: "Write", input: `${"a".repeat(1000)}m${"z".repeat(1000)}` },
+      ],
+      events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "完了しました。" }],
+    };
+
+    const input = toVerificationReviewInput({
+      conversation,
+      confirmedFindings: [],
+      findingsToJudge: [],
+    });
+
+    expect(input).toBe([
+      "<conversation>",
+      [
+        "<previous-turn-tool-calls>",
+        "<tool-call name=\"Bash\">\n<input>\n{\"command\":\"ls\"}\n</input>\n</tool-call>",
+        `<tool-call name="Write">\n<input>\n${"a".repeat(1000)}\n[1 characters omitted]\n${"z".repeat(1000)}\n</input>\n</tool-call>`,
+        "</previous-turn-tool-calls>",
+      ].join("\n"),
+      "<reviewed-response>\n前の応答\n</reviewed-response>",
+      "<user-message>\n依頼\n</user-message>",
+      "<final-response>\n完了しました。\n</final-response>",
+      "</conversation>",
+      "<textlint-findings-already-reported></textlint-findings-already-reported>",
+    ].join("\n"));
+  });
+
+  it.each([
+    { name: "合計12000文字", count: 6, want: "abcdef" },
+    { name: "合計14000文字", count: 7, want: "bcdefg" },
+  ])("[positive] 前のターンのツール呼び出しの入力が$nameのとき、新しいものから12000文字に収まる分だけを入れる", ({ count, want }) => {
+    const names = "abcdefg".slice(0, count);
+    const conversation: Conversation = {
+      kind: "after-user-message",
+      userMessageLine: 1,
+      history: [],
+      previousToolCalls: [...names].map((name) => ({
+        name,
+        input: name.repeat(2000),
+      })),
+      events: [{ kind: "user-message", text: "依頼" }],
+    };
+
+    const input = toVerificationReviewInput({
+      conversation,
+      confirmedFindings: [],
+      findingsToJudge: [],
+    });
+
+    expect(input).toBe([
+      "<conversation>",
+      [
+        "<previous-turn-tool-calls>",
+        ...[...want].map((name) => `<tool-call name="${name}">\n<input>\n${name.repeat(2000)}\n</input>\n</tool-call>`),
+        "</previous-turn-tool-calls>",
+      ].join("\n"),
+      "<user-message>\n依頼\n</user-message>",
       "</conversation>",
       "<textlint-findings-already-reported></textlint-findings-already-reported>",
     ].join("\n"));

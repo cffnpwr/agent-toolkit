@@ -239,7 +239,7 @@ describe("reviewResponses", () => {
     })) as never);
 
     const sections = await reviewResponses(Ok("codex"), {
-      conversation: { kind: "after-user-message", userMessageLine: 2, history: [{ kind: "response", text: "前の応答" }], events: [{ kind: "response", text: "本文" }] },
+      conversation: { kind: "after-user-message", userMessageLine: 2, history: [{ kind: "response", text: "前の応答" }], previousToolCalls: [], events: [{ kind: "response", text: "本文" }] },
       confirmedFindings: [],
       findingsToJudge: ["- 候補"],
     });

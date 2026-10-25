@@ -121,6 +121,7 @@ describe("withoutReviewed", () => {
       kind: "after-user-message" as const,
       userMessageLine: 4,
       history: [{ kind: "response" as const, text: "前の応答" }],
+      previousToolCalls: [],
       events: [
         { kind: "user-message" as const, text: "依頼" },
         { kind: "response" as const, text: "1つ目" },
@@ -139,6 +140,7 @@ describe("withoutReviewed", () => {
       kind: "after-user-message" as const,
       userMessageLine: 4,
       history: [{ kind: "response", text: "前の応答" }],
+      previousToolCalls: [],
       events: [
         { kind: "user-message", text: "依頼" },
         { kind: "tool-call", callId: "c1", name: "Bash", input: "{}", result: "ok" },
@@ -156,6 +158,7 @@ describe("withoutReviewed", () => {
       kind: "after-user-message" as const,
       userMessageLine: 4,
       history: [],
+      previousToolCalls: [],
       events: [{ kind: "user-message" as const, text: "依頼" }, { kind: "response" as const, text: "応答" }],
     };
 
@@ -165,6 +168,7 @@ describe("withoutReviewed", () => {
       kind: "after-user-message" as const,
       userMessageLine: 4,
       history: [],
+      previousToolCalls: [],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "応答" }],
     });
   });
@@ -192,7 +196,7 @@ describe("blockStateOf", () => {
     { name: "ユーザーの発言の行が記録と一致する", stopHookActive: false },
     { name: "ユーザーの発言の行が記録と一致し、差し戻しを受けて応答を続けている", stopHookActive: true },
   ])("[positive] $nameとき、差し戻した回数と指摘を返す", ({ stopHookActive }) => {
-    const conversation = { kind: "after-user-message" as const, userMessageLine: 4, history: [], events: [] };
+    const conversation = { kind: "after-user-message" as const, userMessageLine: 4, history: [], previousToolCalls: [], events: [] };
 
     const record = { block: { userMessageLine: 4, count: 2, findings } };
 
@@ -213,8 +217,8 @@ describe("blockStateOf", () => {
     block: BlockRecord | undefined;
     stopHookActive: boolean;
   }>([
-    { name: "差し戻しの記録が無い", conversation: { kind: "after-user-message", userMessageLine: 4, history: [], events: [] }, block: undefined, stopHookActive: true },
-    { name: "ユーザーの発言の行が記録と異なる", conversation: { kind: "after-user-message", userMessageLine: 6, history: [], events: [] }, block: { userMessageLine: 4, count: 1, findings }, stopHookActive: true },
+    { name: "差し戻しの記録が無い", conversation: { kind: "after-user-message", userMessageLine: 4, history: [], previousToolCalls: [], events: [] }, block: undefined, stopHookActive: true },
+    { name: "ユーザーの発言の行が記録と異なる", conversation: { kind: "after-user-message", userMessageLine: 6, history: [], previousToolCalls: [], events: [] }, block: { userMessageLine: 4, count: 1, findings }, stopHookActive: true },
     { name: "ユーザーの発言が無く、差し戻しを受けた応答でない", conversation: { kind: "no-user-message", events: [] }, block: { userMessageLine: null, count: 1, findings }, stopHookActive: false },
     { name: "ユーザーの発言が無く、記録の行が数値", conversation: { kind: "no-user-message", events: [] }, block: { userMessageLine: 0, count: 1, findings }, stopHookActive: true },
   ])("[negative] $nameとき、undefinedを返す", ({ conversation, block, stopHookActive }) => {
@@ -230,6 +234,7 @@ describe("nextRecord", () => {
       kind: "after-user-message" as const,
       userMessageLine: 4,
       history: [],
+      previousToolCalls: [],
       events: [{ kind: "user-message" as const, text: "依頼" }, { kind: "response" as const, text: "1つ目" }, { kind: "response" as const, text: "2つ目" }],
     };
     const findings = [{ rule: "calque", quote: "安全側に倒す", reason: "直訳", suggestion: "安全を優先する" }];
