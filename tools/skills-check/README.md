@@ -72,3 +72,6 @@ bun run src/main.ts --root <dir>...    # ディレクトリ直下の各スキル
 ### 本リポジトリの追加規約（`source: repo` / `level: must`）
 
 `compatibility`フィールドと本文の`## Requirements`節が、両方そろっているか、どちらも無いことを検査します（参照: [skill-creatorスキル](../../.apm/skills/skill-creator/SKILL.md)）。
+
+この検査は一時的に無効化しています。
+有無の一致しか検査できず、宣言内容が妥当かを検査できないためです。

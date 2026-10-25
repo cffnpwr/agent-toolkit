@@ -2,7 +2,6 @@ import type { Rule } from "../types.ts";
 
 import { bodyLineCountRule } from "./body-line-count.ts";
 import { bodyTokenCountRule } from "./body-token-count.ts";
-import { dependencyDeclarationRule } from "./dependency-declaration.ts";
 import { extraFieldsRule } from "./extra-fields.ts";
 import { nameDirectoryMatchRule } from "./name-directory-match.ts";
 import { referenceDepthRule } from "./reference-depth.ts";
@@ -14,5 +13,6 @@ export const RULES: readonly Rule[] = [
   bodyLineCountRule,
   bodyTokenCountRule,
   referenceDepthRule,
-  dependencyDeclarationRule,
+  // `dependency-declaration`は一時的に無効化している。
+  // `compatibility`と`## Requirements`節の有無の一致しか検査できず、宣言内容の妥当性を検査できないため。
 ];
