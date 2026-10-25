@@ -19,6 +19,6 @@
     "textlint-rule-no-mixed-zenkaku-and-hankaku-alphabet": "1.0.1",
     "textlint-rule-preset-ja-technical-writing": "12.0.2",
     "textlint-plugin-latex2e": "1.2.1",
-    "textlint-rule-prh": "6.1.0"
+    "textlint-rule-prh": "6.1.1"
   }
 }
