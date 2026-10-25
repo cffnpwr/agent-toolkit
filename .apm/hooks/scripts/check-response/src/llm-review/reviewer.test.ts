@@ -239,7 +239,7 @@ describe("reviewResponses", () => {
     })) as never);
 
     const sections = await reviewResponses(Ok("codex"), {
-      conversation: { kind: "after-user-message", userMessageLine: 2, history: [{ kind: "response", text: "前の応答" }], previousToolCalls: [], events: [{ kind: "response", text: "本文" }] },
+      conversation: { kind: "after-user-message", instructionFiles: [], userMessageLine: 2, history: [{ kind: "response", text: "前の応答" }], previousToolCalls: [], events: [{ kind: "response", text: "本文" }] },
       confirmedFindings: [],
       findingsToJudge: ["- 候補"],
     });
@@ -291,7 +291,7 @@ describe("reviewResponses", () => {
       throw new Error("unexpected call");
     }) as never);
 
-    const sections = await reviewResponses(Err(new HarnessDetectionError("no ancestor")), { conversation: { kind: "no-user-message", events: [{ kind: "response", text: "本文" }] }, confirmedFindings: [], findingsToJudge: [] });
+    const sections = await reviewResponses(Err(new HarnessDetectionError("no ancestor")), { conversation: { kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text: "本文" }] }, confirmedFindings: [], findingsToJudge: [] });
 
     expect(sections).toEqual([]);
     expect(mkdtemp.mock.calls).toEqual([]);
@@ -315,7 +315,7 @@ describe("reviewProse", () => {
       exited: Promise.resolve(0),
     })) as never);
 
-    const sections = await reviewProse(Ok("claude"), { conversation: { kind: "no-user-message", events: [{ kind: "response", text: "本文" }] }, confirmedFindings: [], findingsToJudge: [] });
+    const sections = await reviewProse(Ok("claude"), { conversation: { kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text: "本文" }] }, confirmedFindings: [], findingsToJudge: [] });
 
     expect(sections.map(({ title, result }) => ({ title, findings: result.unwrap() }))).toEqual([{ title: "Prose review", findings: [] }]);
     expect(spawn.mock.calls).toEqual([[
@@ -346,7 +346,7 @@ describe("reviewProse", () => {
       throw new Error("unexpected call");
     }) as never);
 
-    const sections = await reviewProse(Err(new HarnessDetectionError("no ancestor")), { conversation: { kind: "no-user-message", events: [{ kind: "response", text: "本文" }] }, confirmedFindings: [], findingsToJudge: [] });
+    const sections = await reviewProse(Err(new HarnessDetectionError("no ancestor")), { conversation: { kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text: "本文" }] }, confirmedFindings: [], findingsToJudge: [] });
 
     expect(sections).toEqual([]);
     expect(spawn.mock.calls).toEqual([]);

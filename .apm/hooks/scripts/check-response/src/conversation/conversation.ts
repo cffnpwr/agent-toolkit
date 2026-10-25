@@ -5,7 +5,7 @@ const JAPANESE_CHARACTER = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han
 
 const jsonLine = type("string.json.parse");
 
-export const EMPTY_CONVERSATION: Conversation = { kind: "no-user-message", events: [] };
+export const EMPTY_CONVERSATION: Conversation = { kind: "no-user-message", instructionFiles: [], events: [] };
 
 export type ConversationEvent = { kind: "user-message"; text: string; }
   // ターンの途中に届いたユーザーの発言
@@ -23,9 +23,15 @@ export type ConversationEvent = { kind: "user-message"; text: string; }
   | { kind: "hook-feedback"; text: string; }
   | { kind: "response"; text: string; };
 
+export interface InstructionFile {
+  path: string;
+  content: string;
+}
+
 // transcriptの1行から取り出す要素。ツールの結果は対応する呼び出しに追加
 export type TranscriptItem = ConversationEvent
-  | { kind: "tool-result"; callId: string; text: string; };
+  | { kind: "tool-result"; callId: string; text: string; }
+  | { kind: "instruction-files"; files: InstructionFile[]; };
 
 export type HistoryEntry = Extract<ConversationEvent, { kind: "user-message" | "additional-user-message" | "user-answer" | "response"; }>;
 
@@ -33,6 +39,9 @@ export type PreviousToolCall = Pick<Extract<ConversationEvent, { kind: "tool-cal
 
 // ユーザーの最後の発言以降の応答・ツール呼び出し・hookのフィードバックの一覧
 export type Conversation = {
+  // セッションに読み込まれた指示ファイル。パスごとに最後に読み込まれた内容
+  instructionFiles: InstructionFile[];
+} & ({
   kind: "after-user-message";
   // 最後の発言があるtranscriptの行(0始まり)
   userMessageLine: number;
@@ -45,7 +54,7 @@ export type Conversation = {
 } | {
   kind: "no-user-message";
   events: ConversationEvent[];
-};
+});
 
 const historyEntriesOf = (
   events: ConversationEvent[],
@@ -92,6 +101,20 @@ const withToolResult = (
     : event)),
 });
 
+// 読み込み直されたファイルは、前の内容を新しい内容で置換
+const withInstructionFiles = (
+  conversation: Conversation,
+  files: InstructionFile[],
+): Conversation => ({
+  ...conversation,
+  instructionFiles: [
+    ...conversation.instructionFiles.filter(
+      ({ path }) => !files.some((file) => file.path === path),
+    ),
+    ...files,
+  ],
+});
+
 const appendItem = (
   conversation: Conversation,
   item: TranscriptItem,
@@ -99,6 +122,7 @@ const appendItem = (
 ): Conversation => match(item)
   .with({ kind: "user-message" }, (event): Conversation => ({
     kind: "after-user-message",
+    instructionFiles: conversation.instructionFiles,
     userMessageLine: line,
     history: [
       ...historyOf(conversation),
@@ -111,6 +135,7 @@ const appendItem = (
     events: [event],
   }))
   .with({ kind: "tool-result" }, ({ callId, text }) => withToolResult(conversation, callId, text))
+  .with({ kind: "instruction-files" }, ({ files }) => withInstructionFiles(conversation, files))
   .with({ kind: P.union("additional-user-message", "user-answer", "tool-call", "hook-feedback", "response") }, (event): Conversation => ({
     ...conversation,
     events: [...conversation.events, event],

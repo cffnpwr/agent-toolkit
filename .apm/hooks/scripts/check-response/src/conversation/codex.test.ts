@@ -28,6 +28,7 @@ describe("parseCodexRollout", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 4,
       history: [{ kind: "user-message", text: "前の依頼" }, { kind: "response", text: "前の応答" }],
       previousToolCalls: [],
@@ -62,6 +63,7 @@ describe("parseCodexRollout", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -81,6 +83,6 @@ describe("parseCodexRollout", () => {
 
     const conversation = parseCodexRollout(content);
 
-    expect(conversation).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
+    expect(conversation).toEqual({ kind: "after-user-message", instructionFiles: [], userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
   });
 });

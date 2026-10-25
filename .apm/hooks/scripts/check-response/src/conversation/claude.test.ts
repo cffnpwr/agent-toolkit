@@ -19,6 +19,7 @@ describe("parseClaudeTranscript", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 2,
       history: [{ kind: "user-message", text: "前の依頼" }, { kind: "response", text: "前の応答" }],
       previousToolCalls: [],
@@ -60,6 +61,7 @@ describe("parseClaudeTranscript", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -81,6 +83,7 @@ describe("parseClaudeTranscript", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -101,6 +104,7 @@ describe("parseClaudeTranscript", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -123,7 +127,7 @@ describe("parseClaudeTranscript", () => {
 
     const conversation = parseClaudeTranscript(content);
 
-    expect(conversation).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "この画像を見て\n説明して" }] });
+    expect(conversation).toEqual({ kind: "after-user-message", instructionFiles: [], userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "この画像を見て\n説明して" }] });
   });
 
   it("[positive] このhookのStopの差し戻しを、hookのコマンドの表記を除いて取り出す", () => {
@@ -141,6 +145,7 @@ describe("parseClaudeTranscript", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -164,7 +169,7 @@ describe("parseClaudeTranscript", () => {
 
     const conversation = parseClaudeTranscript(content);
 
-    expect(conversation).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
+    expect(conversation).toEqual({ kind: "after-user-message", instructionFiles: [], userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
   });
 
   it("[positive] AskUserQuestionの結果を呼び出しの結果に加え、質問と回答を回答の出来事として取り出す", () => {
@@ -182,6 +187,7 @@ describe("parseClaudeTranscript", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -203,6 +209,7 @@ describe("parseClaudeTranscript", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -219,7 +226,25 @@ describe("parseClaudeTranscript", () => {
 
     const conversation = parseClaudeTranscript(content);
 
-    expect(conversation).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
+    expect(conversation).toEqual({ kind: "after-user-message", instructionFiles: [], userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
+  });
+
+  it("[positive] 読み込まれた指示ファイルのパスと内容を取り出す", () => {
+    const content = [
+      { type: "user", origin: { kind: "human" }, message: { role: "user", content: "依頼" } },
+      { type: "attachment", attachment: { type: "instructions", files: [{ path: "/repo/CLAUDE.md", type: "Project", content: "指示" }] } },
+    ].map((entry) => JSON.stringify(entry)).join("\n");
+
+    const conversation = parseClaudeTranscript(content);
+
+    expect(conversation).toEqual({
+      kind: "after-user-message",
+      instructionFiles: [{ path: "/repo/CLAUDE.md", content: "指示" }],
+      userMessageLine: 0,
+      history: [],
+      previousToolCalls: [],
+      events: [{ kind: "user-message", text: "依頼" }],
+    });
   });
 
   it("[negative] 書き込み途中の行・空行は読み飛ばす", () => {
@@ -231,7 +256,7 @@ describe("parseClaudeTranscript", () => {
 
     const conversation = parseClaudeTranscript(content);
 
-    expect(conversation).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
+    expect(conversation).toEqual({ kind: "after-user-message", instructionFiles: [], userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
   });
 
   it("[negative] ユーザーの発言が無いとき行はundefinedになる", () => {
@@ -239,6 +264,6 @@ describe("parseClaudeTranscript", () => {
 
     const conversation = parseClaudeTranscript(content);
 
-    expect(conversation).toEqual({ kind: "no-user-message", events: [{ kind: "response", text: "応答" }] });
+    expect(conversation).toEqual({ kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text: "応答" }] });
   });
 });

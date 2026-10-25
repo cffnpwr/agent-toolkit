@@ -57,6 +57,11 @@ const additionalUserMessage = type({
   attachment: { type: "'queued_command'", prompt: "string", origin: { kind: "'human'" } },
 });
 
+const instructionsAttachment = type({
+  type: "'attachment'",
+  attachment: { type: "'instructions'", files: type({ path: "string", content: "string" }).array() },
+});
+
 const textOf = (value: string | unknown[]): string => match(value)
   .with(P.string, (text) => text)
   .otherwise((blocks) => blocks.flatMap((block) => (textBlock.allows(block) ? [block.text] : [])).join("\n"));
@@ -104,6 +109,10 @@ const itemsOf = (
     { kind: "user-answer", text: userAnswerText(toolUseResult.answers) },
   ])
   .when(additionalUserMessage.allows, ({ attachment }) => [{ kind: "additional-user-message", text: attachment.prompt }])
+  .when(instructionsAttachment.allows, ({ attachment }) => [{
+    kind: "instruction-files",
+    files: attachment.files.map(({ path, content }) => ({ path, content })),
+  }])
   .when(
     toolResultMessage.allows,
     ({ message }) => toolResultItems(message.content),

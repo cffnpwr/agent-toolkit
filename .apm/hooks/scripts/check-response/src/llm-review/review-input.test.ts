@@ -48,6 +48,7 @@ describe("toProseReviewInput", () => {
   it("[positive] ツール呼び出しを除いて出来事を発生順にタグで囲み、応答のコードブロックを省き、確定した指摘と判定する指摘を続ける", () => {
     const conversation: Conversation = {
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -75,6 +76,7 @@ describe("toProseReviewInput", () => {
   it("[positive] 前のターンがあるとき、応答のコードブロックを省いて会話の前に文脈のタグで入れる", () => {
     const conversation: Conversation = {
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 2,
       history: [{ kind: "user-message", text: "前の依頼" }, { kind: "response", text: "前の応答\n\n```\ncode\n```" }],
       previousToolCalls: [],
@@ -104,6 +106,7 @@ describe("toProseReviewInput", () => {
   it("[positive] 作業中の発言・質問への回答を、会話と前のターンの文脈にそれぞれのタグで入れる", () => {
     const conversation: Conversation = {
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 3,
       history: [{ kind: "user-message", text: "前の依頼" }, { kind: "user-answer", text: "前の質問: 前の回答" }, { kind: "additional-user-message", text: "前の追加の指示" }],
       previousToolCalls: [],
@@ -150,7 +153,7 @@ describe("toProseReviewInput", () => {
       want: ["b".repeat(4000), "c".repeat(4000)],
     },
   ])("[positive] 前のターンの$nameとき、新しいものから12000文字以内に収まる分だけを発生順に入れる", ({ history, want }) => {
-    const conversation: Conversation = { kind: "after-user-message", userMessageLine: 3, history, previousToolCalls: [], events: [] };
+    const conversation: Conversation = { kind: "after-user-message", instructionFiles: [], userMessageLine: 3, history, previousToolCalls: [], events: [] };
 
     const input = toProseReviewInput({
       conversation,
@@ -165,7 +168,7 @@ describe("toProseReviewInput", () => {
   });
 
   it("[negative] ユーザーの発言が無い会話のとき、文脈のタグを入れない", () => {
-    const input = toProseReviewInput({ conversation: { kind: "no-user-message", events: [{ kind: "response", text: "応答" }] }, confirmedFindings: [], findingsToJudge: [] });
+    const input = toProseReviewInput({ conversation: { kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text: "応答" }] }, confirmedFindings: [], findingsToJudge: [] });
 
     expect(input).toBe([
       "<conversation>",
@@ -181,6 +184,7 @@ describe("toVerificationReviewInput", () => {
   it("[positive] 最後の応答だけを最終応答のタグで囲み、それより前の応答を応答のタグで囲み、ツールの入力と結果を呼び出しのタグに入れ、確定した指摘だけを続ける", () => {
     const conversation: Conversation = {
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -211,7 +215,7 @@ describe("toVerificationReviewInput", () => {
     { name: "20000文字", result: "a".repeat(20_000), want: "a".repeat(20_000) },
     { name: "20001文字", result: `${"a".repeat(10_000)}m${"z".repeat(10_000)}`, want: `${"a".repeat(10_000)}\n[1 characters omitted]\n${"z".repeat(10_000)}` },
   ])("[positive] 結果が$nameのとき、先頭と末尾の10000文字ずつを残し、20000文字を超えた分を省いた文字数の表記に置き換える", ({ result, want }) => {
-    const conversation: Conversation = { kind: "no-user-message", events: [{ kind: "tool-call", callId: "c1", name: "Bash", input: "{}", result }] };
+    const conversation: Conversation = { kind: "no-user-message", instructionFiles: [], events: [{ kind: "tool-call", callId: "c1", name: "Bash", input: "{}", result }] };
 
     const input = toVerificationReviewInput({
       conversation,
@@ -230,6 +234,7 @@ describe("toVerificationReviewInput", () => {
   it("[positive] 前のターンに応答があるとき、その最後の応答を会話の先頭に査読済みの応答のタグで入れる", () => {
     const conversation: Conversation = {
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 2,
       history: [{ kind: "user-message", text: "前の依頼" }, { kind: "response", text: "前の応答" }],
       previousToolCalls: [],
@@ -255,6 +260,7 @@ describe("toVerificationReviewInput", () => {
   it("[positive] 前のターンにツール呼び出しがあるとき、その名前・入力・結果を査読済みの応答より前に入れ、2000文字を超える入力と結果を省略する", () => {
     const conversation: Conversation = {
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 3,
       history: [{ kind: "user-message", text: "前の依頼" }, { kind: "response", text: "前の応答" }],
       previousToolCalls: [
@@ -293,6 +299,7 @@ describe("toVerificationReviewInput", () => {
     const names = "abcdefghijk".slice(0, count);
     const conversation: Conversation = {
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 1,
       history: [],
       previousToolCalls: [...names].map((name) => ({
@@ -329,6 +336,7 @@ describe("toVerificationReviewInput", () => {
     const names = "abcd".slice(0, count);
     const conversation: Conversation = {
       kind: "no-user-message",
+      instructionFiles: [],
       events: [...names].map((name) => ({ kind: "tool-call", callId: name, name, input: "{}", result: name.repeat(20_000) })),
     };
 
@@ -352,4 +360,30 @@ describe("toVerificationReviewInput", () => {
     ].join("\n"));
   });
 
+  it("[positive] 指示ファイルがあるとき、パスと内容を会話より前に入れる", () => {
+    const conversation: Conversation = {
+      kind: "no-user-message",
+      instructionFiles: [{ path: "/a/CLAUDE.md", content: "指示A" }, { path: "/b/CLAUDE.md", content: "指示B" }],
+      events: [{ kind: "response", text: "完了しました。" }],
+    };
+
+    const input = toVerificationReviewInput({
+      conversation,
+      confirmedFindings: [],
+      findingsToJudge: [],
+    });
+
+    expect(input).toBe([
+      [
+        "<loaded-instructions>",
+        "<instruction-file path=\"/a/CLAUDE.md\">\n指示A\n</instruction-file>",
+        "<instruction-file path=\"/b/CLAUDE.md\">\n指示B\n</instruction-file>",
+        "</loaded-instructions>",
+      ].join("\n"),
+      "<conversation>",
+      "<final-response>\n完了しました。\n</final-response>",
+      "</conversation>",
+      "<textlint-findings-already-reported></textlint-findings-already-reported>",
+    ].join("\n"));
+  });
 });

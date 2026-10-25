@@ -119,6 +119,7 @@ describe("withoutReviewed", () => {
   it("[positive] 記録とユーザーの発言の行が一致するとき、記録した数の応答を先頭から除く", () => {
     const conversation = {
       kind: "after-user-message" as const,
+      instructionFiles: [],
       userMessageLine: 4,
       history: [{ kind: "response" as const, text: "前の応答" }],
       previousToolCalls: [],
@@ -138,6 +139,7 @@ describe("withoutReviewed", () => {
 
     expect(result).toEqual({
       kind: "after-user-message" as const,
+      instructionFiles: [],
       userMessageLine: 4,
       history: [{ kind: "response", text: "前の応答" }],
       previousToolCalls: [],
@@ -156,6 +158,7 @@ describe("withoutReviewed", () => {
   ])("[negative] $nameとき応答を除かない", ({ record }) => {
     const conversation = {
       kind: "after-user-message" as const,
+      instructionFiles: [],
       userMessageLine: 4,
       history: [],
       previousToolCalls: [],
@@ -166,6 +169,7 @@ describe("withoutReviewed", () => {
 
     expect(result).toEqual({
       kind: "after-user-message" as const,
+      instructionFiles: [],
       userMessageLine: 4,
       history: [],
       previousToolCalls: [],
@@ -173,13 +177,13 @@ describe("withoutReviewed", () => {
     });
   });
   it("[negative] 会話にユーザーの発言が無いとき、記録があっても応答を除かない", () => {
-    const conversation = { kind: "no-user-message" as const, events: [{ kind: "response" as const, text: "応答" }] };
+    const conversation = { kind: "no-user-message" as const, instructionFiles: [], events: [{ kind: "response" as const, text: "応答" }] };
 
     const result = withoutReviewed(conversation, {
       reviewed: { userMessageLine: 0, responseCount: 1 },
     });
 
-    expect(result).toEqual({ kind: "no-user-message", events: [{ kind: "response", text: "応答" }] });
+    expect(result).toEqual({ kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text: "応答" }] });
   });
 });
 
@@ -196,7 +200,7 @@ describe("blockStateOf", () => {
     { name: "ユーザーの発言の行が記録と一致する", stopHookActive: false },
     { name: "ユーザーの発言の行が記録と一致し、差し戻しを受けて応答を続けている", stopHookActive: true },
   ])("[positive] $nameとき、差し戻した回数と指摘を返す", ({ stopHookActive }) => {
-    const conversation = { kind: "after-user-message" as const, userMessageLine: 4, history: [], previousToolCalls: [], events: [] };
+    const conversation = { kind: "after-user-message" as const, instructionFiles: [], userMessageLine: 4, history: [], previousToolCalls: [], events: [] };
 
     const record = { block: { userMessageLine: 4, count: 2, findings } };
 
@@ -206,7 +210,7 @@ describe("blockStateOf", () => {
   });
 
   it("[positive] ユーザーの発言が無い会話で、記録の行もnullで、差し戻しを受けて応答を続けているとき、差し戻した回数と指摘を返す", () => {
-    const state = blockStateOf({ kind: "no-user-message", events: [] }, { block: { userMessageLine: null, count: 1, findings } }, true);
+    const state = blockStateOf({ kind: "no-user-message", instructionFiles: [], events: [] }, { block: { userMessageLine: null, count: 1, findings } }, true);
 
     expect(state).toEqual({ count: 1, findings });
   });
@@ -217,10 +221,10 @@ describe("blockStateOf", () => {
     block: BlockRecord | undefined;
     stopHookActive: boolean;
   }>([
-    { name: "差し戻しの記録が無い", conversation: { kind: "after-user-message", userMessageLine: 4, history: [], previousToolCalls: [], events: [] }, block: undefined, stopHookActive: true },
-    { name: "ユーザーの発言の行が記録と異なる", conversation: { kind: "after-user-message", userMessageLine: 6, history: [], previousToolCalls: [], events: [] }, block: { userMessageLine: 4, count: 1, findings }, stopHookActive: true },
-    { name: "ユーザーの発言が無く、差し戻しを受けた応答でない", conversation: { kind: "no-user-message", events: [] }, block: { userMessageLine: null, count: 1, findings }, stopHookActive: false },
-    { name: "ユーザーの発言が無く、記録の行が数値", conversation: { kind: "no-user-message", events: [] }, block: { userMessageLine: 0, count: 1, findings }, stopHookActive: true },
+    { name: "差し戻しの記録が無い", conversation: { kind: "after-user-message", instructionFiles: [], userMessageLine: 4, history: [], previousToolCalls: [], events: [] }, block: undefined, stopHookActive: true },
+    { name: "ユーザーの発言の行が記録と異なる", conversation: { kind: "after-user-message", instructionFiles: [], userMessageLine: 6, history: [], previousToolCalls: [], events: [] }, block: { userMessageLine: 4, count: 1, findings }, stopHookActive: true },
+    { name: "ユーザーの発言が無く、差し戻しを受けた応答でない", conversation: { kind: "no-user-message", instructionFiles: [], events: [] }, block: { userMessageLine: null, count: 1, findings }, stopHookActive: false },
+    { name: "ユーザーの発言が無く、記録の行が数値", conversation: { kind: "no-user-message", instructionFiles: [], events: [] }, block: { userMessageLine: 0, count: 1, findings }, stopHookActive: true },
   ])("[negative] $nameとき、undefinedを返す", ({ conversation, block, stopHookActive }) => {
     const state = blockStateOf(conversation, { block }, stopHookActive);
 
@@ -232,6 +236,7 @@ describe("nextRecord", () => {
   it("[positive] ユーザーの発言があり差し戻しの状態があるとき、その行と応答の数と差し戻しの状態を記録する", () => {
     const conversation = {
       kind: "after-user-message" as const,
+      instructionFiles: [],
       userMessageLine: 4,
       history: [],
       previousToolCalls: [],
@@ -248,13 +253,13 @@ describe("nextRecord", () => {
   });
 
   it("[negative] ユーザーの発言が無く差し戻しの状態も無いとき、検査済みの応答も差し戻しも記録しない", () => {
-    const record = nextRecord({ kind: "no-user-message", events: [{ kind: "response", text: "応答" }] }, undefined);
+    const record = nextRecord({ kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text: "応答" }] }, undefined);
 
     expect(record).toEqual({ reviewed: undefined, block: undefined });
   });
 
   it("[positive] ユーザーの発言が無く差し戻しの状態があるとき、行をnullにして差し戻しの状態だけを記録する", () => {
-    const record = nextRecord({ kind: "no-user-message", events: [{ kind: "response", text: "応答" }] }, { count: 1, findings: [] });
+    const record = nextRecord({ kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text: "応答" }] }, { count: 1, findings: [] });
 
     expect(record).toEqual({
       reviewed: undefined,

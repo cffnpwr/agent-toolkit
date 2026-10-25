@@ -31,6 +31,7 @@ describe("conversationFromJsonl", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 6,
       history: [
         { kind: "response", text: "発言より前の応答" },
@@ -57,6 +58,7 @@ describe("conversationFromJsonl", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 5,
       history: [
         { kind: "user-message", text: "1つ目の依頼" },
@@ -81,6 +83,7 @@ describe("conversationFromJsonl", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 3,
       history: [
         { kind: "user-message", text: "1つ目の依頼" },
@@ -105,6 +108,7 @@ describe("conversationFromJsonl", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 4,
       history: [
         { kind: "user-message", text: "1つ目の依頼" },
@@ -114,6 +118,25 @@ describe("conversationFromJsonl", () => {
       ],
       previousToolCalls: [],
       events: [{ kind: "user-message", text: "2つ目の依頼" }],
+    });
+  });
+
+  it("[positive] 指示ファイルをターンをまたいで残し、同じパスが読み込み直されたとき新しい内容に置き換える", () => {
+    const content = [
+      { kind: "instruction-files", files: [{ path: "/a/CLAUDE.md", content: "古い内容" }, { path: "/b/CLAUDE.md", content: "B" }] },
+      { kind: "user-message", text: "依頼" },
+      { kind: "instruction-files", files: [{ path: "/a/CLAUDE.md", content: "新しい内容" }] },
+    ].map((item) => JSON.stringify(item)).join("\n");
+
+    const conversation = conversationFromJsonl(content, itemsOf);
+
+    expect(conversation).toEqual({
+      kind: "after-user-message",
+      instructionFiles: [{ path: "/b/CLAUDE.md", content: "B" }, { path: "/a/CLAUDE.md", content: "新しい内容" }],
+      userMessageLine: 1,
+      history: [],
+      previousToolCalls: [],
+      events: [{ kind: "user-message", text: "依頼" }],
     });
   });
 
@@ -127,6 +150,7 @@ describe("conversationFromJsonl", () => {
 
     expect(conversation).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -145,6 +169,7 @@ describe("reviewedResponseOf", () => {
       name: "履歴の後のターンに応答が無い",
       conversation: {
         kind: "after-user-message",
+        instructionFiles: [],
         userMessageLine: 4,
         history: [{ kind: "response", text: "前の途中の応答" }, { kind: "response", text: "前の応答" }, { kind: "user-message", text: "応答の無い依頼" }],
         previousToolCalls: [],
@@ -154,12 +179,12 @@ describe("reviewedResponseOf", () => {
     },
     {
       name: "履歴に応答が無い",
-      conversation: { kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] },
+      conversation: { kind: "after-user-message", instructionFiles: [], userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] },
       want: undefined,
     },
     {
       name: "ユーザーの発言が無い",
-      conversation: { kind: "no-user-message", events: [{ kind: "response", text: "応答" }] },
+      conversation: { kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text: "応答" }] },
       want: undefined,
     },
   ])("[positive] $nameとき、履歴の最後の応答($want)を返す", ({ conversation, want }) => {
@@ -171,6 +196,7 @@ describe("withLastAssistantMessage", () => {
   it("[positive] 最後の応答と異なるとき末尾に応答として加える", () => {
     const conversation: Conversation = {
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [{ kind: "response", text: "前の応答" }],
       previousToolCalls: [],
@@ -181,6 +207,7 @@ describe("withLastAssistantMessage", () => {
 
     expect(result).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [{ kind: "response", text: "前の応答" }],
       previousToolCalls: [],
@@ -194,12 +221,13 @@ describe("withLastAssistantMessage", () => {
   });
 
   it("[positive] 応答がまだ無いとき末尾に応答として加える", () => {
-    const conversation: Conversation = { kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] };
+    const conversation: Conversation = { kind: "after-user-message", instructionFiles: [], userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] };
 
     const result = withLastAssistantMessage(conversation, "最後の応答");
 
     expect(result).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -210,6 +238,7 @@ describe("withLastAssistantMessage", () => {
   it("[negative] 最後の応答と前後の空白を除いて一致するとき加えない", () => {
     const conversation: Conversation = {
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -220,6 +249,7 @@ describe("withLastAssistantMessage", () => {
 
     expect(result).toEqual({
       kind: "after-user-message",
+      instructionFiles: [],
       userMessageLine: 0,
       history: [],
       previousToolCalls: [],
@@ -232,11 +262,11 @@ describe("withLastAssistantMessage", () => {
     { name: "undefined", message: undefined },
     { name: "空白だけ", message: " \n" },
   ])("[negative] 最後の応答が$nameのとき加えない", ({ message }) => {
-    const conversation: Conversation = { kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] };
+    const conversation: Conversation = { kind: "after-user-message", instructionFiles: [], userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] };
 
     const result = withLastAssistantMessage(conversation, message);
 
-    expect(result).toEqual({ kind: "after-user-message", userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
+    expect(result).toEqual({ kind: "after-user-message", instructionFiles: [], userMessageLine: 0, history: [], previousToolCalls: [], events: [{ kind: "user-message", text: "依頼" }] });
   });
 });
 

@@ -54,7 +54,7 @@ const reviewSectionsOf = async (
     return { reviews: [], notes: [`The prose review was skipped: ${harness.unwrapErr().message}`] };
   }
   const reviews = await reviewProse(harness, {
-    conversation: { kind: "no-user-message", events: [{ kind: "response", text }] },
+    conversation: { kind: "no-user-message", instructionFiles: [], events: [{ kind: "response", text }] },
     confirmedFindings: findingsOf(textlint, "confirmed").map(describeTextlintFinding),
     findingsToJudge: findingsOf(textlint, "needs-judgment").map(describeTextlintFinding),
   });

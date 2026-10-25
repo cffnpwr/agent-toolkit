@@ -3,7 +3,7 @@ import type { TxtNode } from "@textlint/ast-node-types";
 import { parse } from "@textlint/markdown-to-ast";
 import { match, P } from "ts-pattern";
 
-import type { Conversation, ConversationEvent, HistoryEntry, PreviousToolCall } from "../conversation/conversation.ts";
+import type { Conversation, ConversationEvent, HistoryEntry, InstructionFile, PreviousToolCall } from "../conversation/conversation.ts";
 
 import { historyOf, previousToolCallsOf, reviewedResponseOf } from "../conversation/conversation.ts";
 
@@ -205,6 +205,14 @@ const withAllottedResults = (
     .toReversed();
 };
 
+const instructionFileTag = ({ path, content }: InstructionFile): string => `<instruction-file path="${path}">\n${content}\n</instruction-file>`;
+
+const instructionFilesTags = (
+  files: InstructionFile[],
+): string[] => match(files)
+  .with([], () => [])
+  .otherwise(() => [tag("loaded-instructions", files.map(instructionFileTag).join("\n"))]);
+
 // 検査の対象は最後の応答のみで、それより前の応答は文脈
 export const toVerificationReviewInput = ({
   conversation,
@@ -216,6 +224,7 @@ export const toVerificationReviewInput = ({
   );
 
   return [
+    ...instructionFilesTags(conversation.instructionFiles),
     "<conversation>",
     ...previousToolCallTags(previousToolCallsOf(conversation)),
     ...reviewedResponseTags(reviewedResponseOf(conversation)),
