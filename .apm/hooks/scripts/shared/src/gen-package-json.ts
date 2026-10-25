@@ -30,10 +30,13 @@ if (root === undefined) {
   throw new Error("bun.lock has no workspace root entry");
 }
 
+// 既存のpackage.jsonは依存だけを置き換え、scripts等のフィールドを残す
+const pkgFile = Bun.file(pkgPath);
+const baseManifest: Record<string, unknown> = await pkgFile.exists()
+  ? await pkgFile.json() as Record<string, unknown>
+  : { name: root.name ?? "", private: true, type: "module" };
 const manifest = {
-  name: root.name ?? "",
-  private: true,
-  type: "module",
+  ...baseManifest,
   dependencies: root.dependencies ?? {},
   devDependencies: root.devDependencies ?? {},
 };
