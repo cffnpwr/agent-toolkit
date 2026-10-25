@@ -215,14 +215,14 @@ describe("toVerificationReviewInput", () => {
     ].join("\n"));
   });
 
-  it("[positive] 前のターンにツール呼び出しがあるとき、その名前と入力を結果なしで査読済みの応答より前に入れ、2000文字を超える入力を省略する", () => {
+  it("[positive] 前のターンにツール呼び出しがあるとき、その名前・入力・結果を査読済みの応答より前に入れ、2000文字を超える入力と結果を省略する", () => {
     const conversation: Conversation = {
       kind: "after-user-message",
       userMessageLine: 3,
       history: [{ kind: "user-message", text: "前の依頼" }, { kind: "response", text: "前の応答" }],
       previousToolCalls: [
-        { name: "Bash", input: "{\"command\":\"ls\"}" },
-        { name: "Write", input: `${"a".repeat(1000)}m${"z".repeat(1000)}` },
+        { name: "Bash", input: "{\"command\":\"ls\"}", result: `${"b".repeat(1000)}m${"y".repeat(1000)}` },
+        { name: "Write", input: `${"a".repeat(1000)}m${"z".repeat(1000)}`, result: undefined },
       ],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "完了しました。" }],
     };
@@ -237,7 +237,7 @@ describe("toVerificationReviewInput", () => {
       "<conversation>",
       [
         "<previous-turn-tool-calls>",
-        "<tool-call name=\"Bash\">\n<input>\n{\"command\":\"ls\"}\n</input>\n</tool-call>",
+        `<tool-call name="Bash">\n<input>\n{"command":"ls"}\n</input>\n<result>\n${"b".repeat(1000)}\n[1 characters omitted]\n${"y".repeat(1000)}\n</result>\n</tool-call>`,
         `<tool-call name="Write">\n<input>\n${"a".repeat(1000)}\n[1 characters omitted]\n${"z".repeat(1000)}\n</input>\n</tool-call>`,
         "</previous-turn-tool-calls>",
       ].join("\n"),
@@ -250,10 +250,10 @@ describe("toVerificationReviewInput", () => {
   });
 
   it.each([
-    { name: "合計12000文字", count: 6, want: "abcdef" },
-    { name: "合計14000文字", count: 7, want: "bcdefg" },
-  ])("[positive] 前のターンのツール呼び出しの入力が$nameのとき、新しいものから12000文字に収まる分だけを入れる", ({ count, want }) => {
-    const names = "abcdefg".slice(0, count);
+    { name: "合計40000文字", count: 10, want: "abcdefghij" },
+    { name: "合計44000文字", count: 11, want: "bcdefghijk" },
+  ])("[positive] 前のターンのツール呼び出しの入力と結果が$nameのとき、新しいものから40000文字に収まる分だけを入れる", ({ count, want }) => {
+    const names = "abcdefghijk".slice(0, count);
     const conversation: Conversation = {
       kind: "after-user-message",
       userMessageLine: 1,
@@ -261,6 +261,7 @@ describe("toVerificationReviewInput", () => {
       previousToolCalls: [...names].map((name) => ({
         name,
         input: name.repeat(2000),
+        result: name.toUpperCase().repeat(2000),
       })),
       events: [{ kind: "user-message", text: "依頼" }],
     };
@@ -275,7 +276,7 @@ describe("toVerificationReviewInput", () => {
       "<conversation>",
       [
         "<previous-turn-tool-calls>",
-        ...[...want].map((name) => `<tool-call name="${name}">\n<input>\n${name.repeat(2000)}\n</input>\n</tool-call>`),
+        ...[...want].map((name) => `<tool-call name="${name}">\n<input>\n${name.repeat(2000)}\n</input>\n<result>\n${name.toUpperCase().repeat(2000)}\n</result>\n</tool-call>`),
         "</previous-turn-tool-calls>",
       ].join("\n"),
       "<user-message>\n依頼\n</user-message>",
@@ -313,4 +314,5 @@ describe("toVerificationReviewInput", () => {
       "<textlint-findings-already-reported></textlint-findings-already-reported>",
     ].join("\n"));
   });
+
 });

@@ -25,7 +25,7 @@ export type TranscriptItem = ConversationEvent
 
 export type HistoryEntry = Extract<ConversationEvent, { kind: "user-message" | "response"; }>;
 
-export type PreviousToolCall = Pick<Extract<ConversationEvent, { kind: "tool-call"; }>, "name" | "input">;
+export type PreviousToolCall = Pick<Extract<ConversationEvent, { kind: "tool-call"; }>, "name" | "input" | "result">;
 
 // ユーザーの最後の発言以降の応答・ツール呼び出し・hookのフィードバックの一覧
 export type Conversation = {
@@ -34,7 +34,7 @@ export type Conversation = {
   userMessageLine: number;
   // 最後の発言より前の発言と応答を発生順に並べたもの
   history: HistoryEntry[];
-  // 最後の発言の直前のターンのツール呼び出しを発生順に並べたもの
+  // 最後の発言より前のターンのツール呼び出しを発生順に並べたもの
   previousToolCalls: PreviousToolCall[];
   // 発生順に並べた出来事。先頭はユーザーの最後の発言
   events: ConversationEvent[];
@@ -66,7 +66,7 @@ export const previousToolCallsOf = (
 const toolCallsOf = (
   events: ConversationEvent[],
 ): PreviousToolCall[] => events.flatMap((event) => (event.kind === "tool-call"
-  ? [{ name: event.name, input: event.input }]
+  ? [{ name: event.name, input: event.input, result: event.result }]
   : []));
 
 // 査読済みの前のターンの最終応答
@@ -100,7 +100,10 @@ const appendItem = (
       ...historyOf(conversation),
       ...historyEntriesOf(conversation.events),
     ],
-    previousToolCalls: toolCallsOf(conversation.events),
+    previousToolCalls: [
+      ...previousToolCallsOf(conversation),
+      ...toolCallsOf(conversation.events),
+    ],
     events: [event],
   }))
   .with({ kind: "tool-result" }, ({ callId, text }) => withToolResult(conversation, callId, text))

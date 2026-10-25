@@ -18,8 +18,8 @@ const MAX_EXPANDED_RESULTS_LENGTH = 60_000;
 // 文章の査読に文脈として渡す前のターンの文字数の上限
 const MAX_HISTORY_LENGTH = 12_000;
 
-// 未確認事項の検査に渡す前のターンのツール呼び出しの入力の文字数の上限
-const MAX_PREVIOUS_TOOL_CALLS_LENGTH = 12_000;
+// 未確認事項の検査に渡す前のターンのツール呼び出しの入力と結果の文字数の上限
+const MAX_PREVIOUS_TOOL_CALLS_LENGTH = 40_000;
 
 const CODE_BLOCK_PLACEHOLDER = "[コードブロック省略]";
 
@@ -158,21 +158,23 @@ export const toProseReviewInput = ({
   findingsTag("textlint-findings-to-judge", findingsToJudge),
 ].join("\n");
 
-// 実行結果は含めず、操作をしたかどうかの裏付けにだけ使う
 const previousToolCallTags = (
   toolCalls: PreviousToolCall[],
 ): string[] => match(newestWithin(
-  toolCalls.map(({ name, input }) => ({
+  toolCalls.map(({ name, input, result }) => ({
     name,
     input: truncateToolText(input, MAX_RESULT_LENGTH),
+    result: result === undefined
+      ? undefined
+      : truncateToolText(result, MAX_RESULT_LENGTH),
   })),
-  ({ input }) => input.length,
+  ({ input, result }) => input.length + (result?.length ?? 0),
   MAX_PREVIOUS_TOOL_CALLS_LENGTH,
 ))
   .with([], () => [])
   .otherwise((calls) => [tag(
     "previous-turn-tool-calls",
-    calls.map(({ name, input }) => toolCallTag(name, input, undefined)).join("\n"),
+    calls.map(({ name, input, result }) => toolCallTag(name, input, result)).join("\n"),
   )]);
 
 // 新しい結果から順に、合計が上限に収まる分だけ広げた上限で省略

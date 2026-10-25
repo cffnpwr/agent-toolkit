@@ -15,7 +15,7 @@ describe("conversationFromJsonl", () => {
     entry: unknown,
   ): TranscriptItem[] => [entry as TranscriptItem];
 
-  it("[positive] 最後の発言より前の発言と応答を発生順に履歴にし、直前のターンのツール呼び出しの名前と入力を残す", () => {
+  it("[positive] 最後の発言より前の発言と応答を発生順に履歴にし、前のターンのツール呼び出しの名前・入力・結果を残す", () => {
     const content = [
       { kind: "response", text: "発言より前の応答" },
       { kind: "user-message", text: "前の依頼" },
@@ -38,12 +38,12 @@ describe("conversationFromJsonl", () => {
         { kind: "response", text: "前の途中の応答" },
         { kind: "response", text: "前の応答" },
       ],
-      previousToolCalls: [{ name: "Bash", input: "{}" }],
+      previousToolCalls: [{ name: "Bash", input: "{}", result: "ok" }],
       events: [{ kind: "user-message", text: "依頼" }, { kind: "response", text: "応答" }],
     });
   });
 
-  it("[positive] ツール呼び出しが2つ前のターンにだけあるとき、直前のターンのツール呼び出しを空にする", () => {
+  it("[positive] ツール呼び出しが2つ前のターンにあるとき、前のターンのツール呼び出しに累積して残す", () => {
     const content = [
       { kind: "user-message", text: "1つ目の依頼" },
       { kind: "tool-call", callId: "c1", name: "Bash", input: "{}", result: "ok" },
@@ -64,7 +64,7 @@ describe("conversationFromJsonl", () => {
         { kind: "user-message", text: "2つ目の依頼" },
         { kind: "response", text: "2つ目の応答" },
       ],
-      previousToolCalls: [],
+      previousToolCalls: [{ name: "Bash", input: "{}", result: "ok" }],
       events: [{ kind: "user-message", text: "3つ目の依頼" }],
     });
   });
