@@ -8,8 +8,10 @@ import type { Target } from "./types.ts";
 
 import { foldCwd } from "../../shared/src/cdfold.ts";
 
-// 値を取る(次の語を消費する)フラグ。
-// 値をサブコマンドやメッセージフラグと誤認しないために列挙する。
+/*
+ * 値を取る(次の語を消費する)フラグ。
+ * 値をサブコマンドやメッセージフラグと誤認しないために列挙する。
+ */
 const VALUE_FLAGS = new Set([
   "-m",
   "--message",
@@ -26,8 +28,10 @@ const VALUE_FLAGS = new Set([
   "--color",
 ]);
 
-// -m/--message でコミット説明を設定するサブコマンド(既定エイリアスを含む)。
-// jj 0.43の各サブコマンドヘルプで、-m/--messageが説明を設定することを確認済み。
+/*
+ * -m/--message でコミット説明を設定するサブコマンド(既定エイリアスを含む)。
+ * jj 0.43の各サブコマンドヘルプで、-m/--messageが説明を設定することを確認済み。
+ */
 const MESSAGE_SUBCOMMANDS = new Set([
   "describe",
   "desc",
@@ -51,9 +55,12 @@ const resolvePart = (part: DoubleQuotedChild | WordPart): string | null => {
       let out = "";
       for (const child of part.parts) {
         const v = resolvePart(child);
-        if (v === null) return null;
+        if (v === null) {
+          return null;
+        }
         out += v;
       }
+
       return out;
     }
     default:
@@ -61,17 +68,24 @@ const resolvePart = (part: DoubleQuotedChild | WordPart): string | null => {
   }
 };
 
-// Wordを静的に解決する。実行時の環境に依存する要素を含めばnull。
-// cdfoldのexpandWordと異なり変数環境を参照しない。
-// メッセージはlint結果を左右するため、hookプロセスの環境で推測せず実行時要素は解決不能に倒す。
+/*
+ * Wordを静的に解決する。実行時の環境に依存する要素を含めばnull。
+ * cdfoldのexpandWordと異なり変数環境を参照しない。
+ * メッセージはlint結果を左右するため、hookプロセスの環境で推測せず実行時要素は解決不能に倒す。
+ */
 const resolveStatic = (word: Word): string | null => {
-  if (word.parts === undefined) return word.value;
+  if (word.parts === undefined) {
+    return word.value;
+  }
   let out = "";
   for (const part of word.parts) {
     const v = resolvePart(part);
-    if (v === null) return null;
+    if (v === null) {
+      return null;
+    }
     out += v;
   }
+
   return out;
 };
 
@@ -87,37 +101,55 @@ export const parseTargets = (command: string, baseCwd: Cwd): Target[] => {
   foldCwd(parse(command).commands, baseCwd, (cmd, cwd) => {
     // コマンド名がjjバイナリ(jj または .../jj)の呼び出しだけを対象にする。
     const head = cmd.name?.value;
-    if (head === undefined) return;
-    if (head !== "jj" && !head.endsWith("/jj")) return;
+    if (head === undefined) {
+      return;
+    }
+    if (head !== "jj" && !head.endsWith("/jj")) {
+      return;
+    }
 
     const seg = cmd.suffix.map((word) => word.value);
     // jjの後ろで最初に現れる非グローバルフラグをサブコマンドとみなす。
     let subIdx = -1;
     for (let k = 0; k < seg.length; k++) {
       const t = seg[k];
-      if (t === undefined) continue;
+      if (t === undefined) {
+        continue;
+      }
       if (t.startsWith("-")) {
-        if (VALUE_FLAGS.has(t)) k++;
+        if (VALUE_FLAGS.has(t)) {
+          k++;
+        }
         continue;
       }
       subIdx = k;
       break;
     }
-    if (subIdx < 0) return;
+    if (subIdx < 0) {
+      return;
+    }
     const sub = seg[subIdx];
-    if (sub === undefined || !MESSAGE_SUBCOMMANDS.has(sub)) return;
+    if (sub === undefined || !MESSAGE_SUBCOMMANDS.has(sub)) {
+      return;
+    }
 
-    // -m/--message値を出現順に集める。1つでも静的に解決できなければ
-    // 連結後のメッセージ全体が確定しないため、呼び出しごとlint対象外にする。
+    /*
+     * -m/--message値を出現順に集める。1つでも静的に解決できなければ
+     * 連結後のメッセージ全体が確定しないため、呼び出しごとlint対象外にする。
+     */
     const values: string[] = [];
     let unresolved = false;
     for (let k = subIdx + 1; k < seg.length; k++) {
       const t = seg[k];
       const word = cmd.suffix[k];
-      if (t === undefined || word === undefined) continue;
+      if (t === undefined || word === undefined) {
+        continue;
+      }
       if (t === "-m" || t === "--message") {
         const next = cmd.suffix[k + 1];
-        if (next === undefined) continue;
+        if (next === undefined) {
+          continue;
+        }
         k++;
         const v = resolveStatic(next);
         if (v === null) {
@@ -152,5 +184,6 @@ export const parseTargets = (command: string, baseCwd: Cwd): Target[] => {
     const message = unresolved || values.length === 0 ? null : values.join("\n\n");
     targets.push({ message, cwd });
   });
+
   return targets;
 };

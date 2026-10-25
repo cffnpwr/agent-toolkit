@@ -22,8 +22,10 @@ import { classify } from "./classify.ts";
 import { parseGitCalls } from "./command.ts";
 import { extractCommand, isObject } from "./input.ts";
 
-// ブロックフィードバック。
-// 全Harnessがexit 2 + stderrをブロック/フィードバックとして扱う。
+/*
+ * ブロックフィードバック。
+ * 全Harnessがexit 2 + stderrをブロック/フィードバックとして扱う。
+ */
 const block = (reason: string): never => {
   process.stderr.write(`${reason}\n`);
   process.exit(2);
@@ -33,20 +35,27 @@ const block = (reason: string): never => {
 const jjRepoCache = new Map<string, boolean>();
 const isJjRepo = (cwd: string): boolean => {
   const cached = jjRepoCache.get(cwd);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) {
+    return cached;
+  }
   const res = spawnSync("jj", ["root", "--ignore-working-copy"], { cwd });
   const ok = res.status === 0;
   jjRepoCache.set(cwd, ok);
+
   return ok;
 };
 
 const run = async (): Promise<void> => {
   const parsed: unknown = JSON.parse(await Bun.stdin.text());
-  if (!isObject(parsed)) return;
+  if (!isObject(parsed)) {
+    return;
+  }
   const input: Json = parsed;
 
   const command = extractCommand(input);
-  if (command === undefined) return;
+  if (command === undefined) {
+    return;
+  }
 
   const baseCwd = resolveBaseCwd(input.cwd);
 
@@ -54,13 +63,21 @@ const run = async (): Promise<void> => {
   const suggestions: string[] = [];
   for (const call of parseGitCalls(command, baseCwd)) {
     // 有効CWDが不明、または非jjリポジトリのgit呼び出しは対象外(誤ブロックを避ける)。
-    if (call.cwd === null || !isJjRepo(call.cwd)) continue;
+    if (call.cwd === null || !isJjRepo(call.cwd)) {
+      continue;
+    }
     const suggestion = classify(call);
-    if (suggestion === undefined) continue;
+    if (suggestion === undefined) {
+      continue;
+    }
     const line = `  git ${call.subcommand} -> ${suggestion}`;
-    if (!suggestions.includes(line)) suggestions.push(line);
+    if (!suggestions.includes(line)) {
+      suggestions.push(line);
+    }
   }
-  if (suggestions.length === 0) return;
+  if (suggestions.length === 0) {
+    return;
+  }
 
   block(
     "prefer-jj: this repository is managed by jj. Use jj instead of git:\n"

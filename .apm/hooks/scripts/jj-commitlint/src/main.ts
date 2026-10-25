@@ -22,15 +22,19 @@ import { parseTargets } from "./command.ts";
 import { extractCommand, isObject } from "./input.ts";
 import { runCommitlint } from "./lint.ts";
 
-// 違反フィードバック。
-// 全Harnessがexit 2 + stderrをブロック/フィードバックとして扱う。
+/*
+ * 違反フィードバック。
+ * 全Harnessがexit 2 + stderrをブロック/フィードバックとして扱う。
+ */
 const block = (reason: string): never => {
   process.stderr.write(`${reason}\n`);
   process.exit(2);
 };
 
-// fail-open警告。
-// 通すが理由を伝える(exit 1は全Harnessで非ブロック警告)。
+/*
+ * fail-open警告。
+ * 通すが理由を伝える(exit 1は全Harnessで非ブロック警告)。
+ */
 const warn = (message: string): never => {
   process.stderr.write(`${message}\n`);
   process.exit(1);
@@ -38,11 +42,15 @@ const warn = (message: string): never => {
 
 const run = async (): Promise<void> => {
   const parsed: unknown = JSON.parse(await Bun.stdin.text());
-  if (!isObject(parsed)) return;
+  if (!isObject(parsed)) {
+    return;
+  }
   const input: Json = parsed;
 
   const command = extractCommand(input);
-  if (command === undefined) return;
+  if (command === undefined) {
+    return;
+  }
 
   const baseCwd = resolveBaseCwd(input.cwd);
 
@@ -52,15 +60,23 @@ const run = async (): Promise<void> => {
   const seen = new Set<string>();
   const messages: { cwd: string; message: string; }[] = [];
   for (const t of targets) {
-    if (t.message === null) continue;
+    if (t.message === null) {
+      continue;
+    }
     // 有効CWDが不明な対象は、無関係なリポジトリの設定を推測で使わないためスキップする。
-    if (t.cwd === null) continue;
+    if (t.cwd === null) {
+      continue;
+    }
     const key = `${t.cwd}\0${t.message}`;
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
     messages.push({ cwd: t.cwd, message: t.message });
   }
-  if (messages.length === 0) return;
+  if (messages.length === 0) {
+    return;
+  }
 
   const violations: string[] = [];
   for (const { cwd, message } of messages) {
@@ -75,6 +91,7 @@ const run = async (): Promise<void> => {
         "jj-commitlint: could not run commitlint (bundled commitlint deps not synced?). "
         + `The commit message may violate user-defined rules.\n${result.report}`,
       );
+
       return;
     }
     if (!result.ok) {

@@ -4,7 +4,9 @@ const normalizedName = (skill: Skill): string => skill.frontmatter.name.normaliz
 
 export const nameDirectoryMatchRule: Rule = (skill) => {
   const name = normalizedName(skill);
-  if (skill.name.normalize("NFKC") === name) return [];
+  if (skill.name.normalize("NFKC") === name) {
+    return [];
+  }
 
   return [{
     code: "name-dir-mismatch",

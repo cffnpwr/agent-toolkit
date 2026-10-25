@@ -106,7 +106,9 @@ describe("checkSkillsRoot", () => {
     const problems = checkSkillsRoot(workspace.root);
 
     // Then
-    expect(problems.map((problem) => [problem.skillName, problem.code])).toEqual([
+    expect(
+      problems.map((problem) => [problem.skillName, problem.code]),
+    ).toEqual([
       ["broken-skill", "name-dir-mismatch"],
     ]);
   });

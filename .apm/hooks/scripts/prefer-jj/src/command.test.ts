@@ -13,7 +13,10 @@ const blocked = (command: string): string[] => parseGitCalls(command, BASE)
   .map((call) => call.subcommand);
 
 // 各git呼び出しの有効CWDを取り出す。
-const cwds = (command: string, base: string | null = BASE): (string | null)[] => parseGitCalls(command, base)
+const cwds = (
+  command: string,
+  base: string | null = BASE,
+): (string | null)[] => parseGitCalls(command, base)
   .map((call) => call.cwd);
 
 describe("parseGitCalls", () => {
@@ -216,7 +219,9 @@ describe("parseGitCalls: 変数展開とチルダ", () => {
   const keys = ["HOME", "DIR", "UNDEFINED"];
 
   beforeAll(() => {
-    for (const k of keys) saved[k] = process.env[k];
+    for (const k of keys) {
+      saved[k] = process.env[k];
+    }
     process.env.HOME = "/home/u";
     delete process.env.DIR;
     delete process.env.UNDEFINED;
@@ -225,8 +230,11 @@ describe("parseGitCalls: 変数展開とチルダ", () => {
   afterAll(() => {
     for (const k of keys) {
       const v = saved[k];
-      if (v === undefined) delete process.env[k];
-      else process.env[k] = v;
+      if (v === undefined) {
+        delete process.env[k];
+      } else {
+        process.env[k] = v;
+      }
     }
   });
 

@@ -15,7 +15,10 @@ type QualifiedConfig = Awaited<ReturnType<typeof load>>;
  */
 const loadConfig = async (cwd: string): Promise<QualifiedConfig> => {
   const repo = await load({}, { cwd });
-  if (Object.keys(repo.rules).length > 0) return repo;
+  if (Object.keys(repo.rules).length > 0) {
+    return repo;
+  }
+
   return load({ extends: ["@cffnpwr/commitlint-config"] }, { cwd: import.meta.dir });
 };
 
@@ -25,7 +28,10 @@ const loadConfig = async (cwd: string): Promise<QualifiedConfig> => {
  * 設定はリポジトリ設定を優先し、無ければ同梱の@cffnpwr/commitlint-configを使う(loadConfig参照)。
  * ライブラリ・設定パッケージの未同期などのインフラ要因はunavailableとして扱う。
  */
-export const runCommitlint = async (message: string, cwd: string): Promise<LintResult> => {
+export const runCommitlint = async (
+  message: string,
+  cwd: string,
+): Promise<LintResult> => {
   try {
     const config = await loadConfig(cwd);
     const result = await lint(message, config.rules, {
@@ -35,11 +41,14 @@ export const runCommitlint = async (message: string, cwd: string): Promise<LintR
       helpUrl: config.helpUrl,
       parserOpts: config.parserPreset?.parserOpts as ParserOptions | undefined,
     });
-    if (result.valid) return { ok: true, report: "", unavailable: false };
+    if (result.valid) {
+      return { ok: true, report: "", unavailable: false };
+    }
     const report = [
       ...result.errors.map((o) => `error: ${o.message} [${o.name}]`),
       ...result.warnings.map((o) => `warn: ${o.message} [${o.name}]`),
     ].join("\n");
+
     return { ok: false, report, unavailable: false };
   } catch {
     return { ok: false, report: "", unavailable: true };

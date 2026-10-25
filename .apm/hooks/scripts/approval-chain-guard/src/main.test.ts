@@ -18,7 +18,12 @@ const runRaw = (input: string): HookResult => {
     stdout: "pipe",
     stderr: "pipe",
   });
-  return { exitCode: res.exitCode, stdout: res.stdout.toString(), stderr: res.stderr.toString() };
+
+  return {
+    exitCode: res.exitCode,
+    stdout: res.stdout.toString(),
+    stderr: res.stderr.toString(),
+  };
 };
 
 // 合成PermissionRequest入力を組み立てる。
@@ -29,7 +34,9 @@ const permissionRequest = (command: string): string => JSON.stringify({
 });
 
 // stdoutをJSONとして解釈した形にする(拒否出力を期待値全体と突き合わせるため)。
-const withParsedStdout = (res: HookResult): { exitCode: number; stdout: unknown; stderr: string; } => ({
+const withParsedStdout = (
+  res: HookResult,
+): { exitCode: number; stdout: unknown; stderr: string; } => ({
   exitCode: res.exitCode,
   stdout: JSON.parse(res.stdout) as unknown,
   stderr: res.stderr,

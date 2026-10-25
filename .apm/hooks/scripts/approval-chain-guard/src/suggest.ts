@@ -8,7 +8,10 @@ const numbered = (command: string, index: number): string => `  ${index + 1}. ${
  * 拒否理由の文言を組み立てる。
  * 分割案があれば1呼び出しずつのコマンドを列挙し、無ければ検知箇所を示して分割自体を促す。
  */
-export const buildDenyMessage = ({ split, violations }: ChainAnalysis): string => {
+export const buildDenyMessage = ({
+  split,
+  violations,
+}: ChainAnalysis): string => {
   if (split === undefined) {
     return "approval-chain-guard: this call needs approval and chains multiple commands inside a "
       + "compound construct (for/if/subshell/$(...)), which can't be split automatically:\n"

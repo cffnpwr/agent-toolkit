@@ -5,7 +5,8 @@ import { parseTargets } from "./command.ts";
 const BASE = "/base";
 
 // 各jj対象の有効CWDを取り出す。
-const cwds = (command: string): (string | null)[] => parseTargets(command, BASE).map((t) => t.cwd);
+const cwds = (command: string): (string | null)[] => parseTargets(command, BASE)
+  .map((t) => t.cwd);
 
 describe("parseTargets", () => {
   describe("メッセージ抽出", () => {
@@ -236,7 +237,9 @@ describe("parseTargets", () => {
     const keys = ["HOME", "DIR", "UNDEFINED"];
 
     beforeAll(() => {
-      for (const k of keys) saved[k] = process.env[k];
+      for (const k of keys) {
+        saved[k] = process.env[k];
+      }
       process.env.HOME = "/home/u";
       delete process.env.DIR;
       delete process.env.UNDEFINED;
@@ -245,8 +248,11 @@ describe("parseTargets", () => {
     afterAll(() => {
       for (const k of keys) {
         const v = saved[k];
-        if (v === undefined) delete process.env[k];
-        else process.env[k] = v;
+        if (v === undefined) {
+          delete process.env[k];
+        } else {
+          process.env[k] = v;
+        }
       }
     });
 

@@ -10,7 +10,9 @@ export const dependencyDeclarationRule: Rule = (skill) => {
   const hasCompatibility = "compatibility" in skill.frontmatter;
   const hasRequirements = REQUIREMENTS_PATTERN.test(skill.content);
 
-  if (hasCompatibility === hasRequirements) return [];
+  if (hasCompatibility === hasRequirements) {
+    return [];
+  }
 
   return [{
     code: "dependency-declaration-mismatch",

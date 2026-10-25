@@ -53,7 +53,9 @@ describe("dependencyDeclarationRule", () => {
     ],
   ])("%s", (_label, frontmatter, content, expected) => {
     // Given / When
-    const findings = dependencyDeclarationRule(skillOf({ frontmatter, content }));
+    const findings = dependencyDeclarationRule(
+      skillOf({ frontmatter, content }),
+    );
 
     // Then
     expect(findings).toMatchObject(expected);
