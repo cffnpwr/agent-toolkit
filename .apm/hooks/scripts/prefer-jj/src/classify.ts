@@ -1,8 +1,10 @@
 import type { GitCall } from "./types.ts";
 
-// denylist: jj相当のあるgitサブコマンド → jj誘導メッセージ。
-// 対応はjj-referenceスキル(.apm/skills/jj-reference/SKILL.md)の対応表と整合させる。
-// 未登録のサブコマンドは全て通過(既定通過モデル)。
+/*
+ * denylist: jj相当のあるgitサブコマンド → jj誘導メッセージ。
+ * 対応はjj-referenceスキル(.apm/skills/jj-reference/SKILL.md)の対応表と整合させる。
+ * 未登録のサブコマンドは全て通過(既定通過モデル)。
+ */
 const JJ_EQUIVALENTS = new Map<string, string>([
   ["status", "use `jj st`"],
   ["log", "use `jj log`"],
@@ -48,9 +50,15 @@ const isShallowFlag = (arg: string): boolean => arg === "--depth"
  */
 export const classify = (call: GitCall): string | undefined => {
   const suggestion = JJ_EQUIVALENTS.get(call.subcommand);
-  if (suggestion === undefined) return undefined;
-  if (SHALLOW_EXEMPT_SUBCOMMANDS.has(call.subcommand) && call.args.some(isShallowFlag)) {
+  if (suggestion === undefined) {
     return undefined;
   }
+  if (
+    SHALLOW_EXEMPT_SUBCOMMANDS.has(call.subcommand)
+    && call.args.some(isShallowFlag)
+  ) {
+    return undefined;
+  }
+
   return suggestion;
 };

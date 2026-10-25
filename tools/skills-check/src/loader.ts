@@ -20,7 +20,9 @@ export const skillNameOf = (inputDir: string): string => {
   return dir.split("/").filter(Boolean).at(-1) ?? dir;
 };
 
-export const loadSkillLocation = (inputDir: string): Result<SkillLocation, Finding> => {
+export const loadSkillLocation = (
+  inputDir: string,
+): Result<SkillLocation, Finding> => {
   const dir = resolve(inputDir);
 
   if (!existsSync(dir) || !statSync(dir).isDirectory()) {

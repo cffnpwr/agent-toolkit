@@ -27,7 +27,10 @@ const renderText = (problems: readonly Problem[]): string => problems
   .join("\n");
 
 const renderJson = (problems: readonly Problem[]): string => JSON.stringify(
-  problems.map((problem) => ({ ...problem, severity: severityOf(problem.level) })),
+  problems.map((problem) => ({
+    ...problem,
+    severity: severityOf(problem.level),
+  })),
   null,
   2,
 );
@@ -59,12 +62,16 @@ const main = (): number => {
 
   const missing = positionals.filter((path) => !existsSync(path));
   if (missing.length > 0) {
-    for (const path of missing) process.stderr.write(`パスが存在しない: ${path}\n`);
+    for (const path of missing) {
+      process.stderr.write(`パスが存在しない: ${path}\n`);
+    }
 
     return EXIT_USAGE;
   }
 
-  const problems = positionals.flatMap((path) => (values.root === true ? checkSkillsRoot(path) : checkSkill(path)));
+  const problems = positionals.flatMap((path) => (
+    values.root === true ? checkSkillsRoot(path) : checkSkill(path)
+  ));
 
   if (values.json === true) {
     process.stdout.write(`${renderJson(problems)}\n`);
@@ -76,8 +83,12 @@ const main = (): number => {
   const warnings = problems.filter((problem) => problem.level === "should");
   process.stderr.write(`error ${errors.length}件 / warning ${warnings.length}件\n`);
 
-  if (errors.length > 0) return EXIT_PROBLEMS;
-  if (warnings.length > 0 && values["warnings-as-errors"] === true) return EXIT_PROBLEMS;
+  if (errors.length > 0) {
+    return EXIT_PROBLEMS;
+  }
+  if (warnings.length > 0 && values["warnings-as-errors"] === true) {
+    return EXIT_PROBLEMS;
+  }
 
   return EXIT_OK;
 };

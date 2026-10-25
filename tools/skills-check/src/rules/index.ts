@@ -13,6 +13,8 @@ export const RULES: readonly Rule[] = [
   bodyLineCountRule,
   bodyTokenCountRule,
   referenceDepthRule,
-  // `dependency-declaration`は一時的に無効化している。
-  // `compatibility`と`## Requirements`節の有無の一致しか検査できず、宣言内容の妥当性を検査できないため。
+  /*
+   * `dependency-declaration`は一時的に無効化している。
+   * `compatibility`と`## Requirements`節の有無の一致しか検査できず、宣言内容の妥当性を検査できないため。
+   */
 ];

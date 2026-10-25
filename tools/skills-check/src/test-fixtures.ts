@@ -30,7 +30,10 @@ export type TempWorkspace = {
   /** 使い捨てディレクトリの絶対パス。 */
   readonly root: string;
   /** 作ったスキルディレクトリの絶対パスを返す。 */
-  readonly makeSkillDir: (name: string, files: Record<string, string>) => string;
+  readonly makeSkillDir: (
+    name: string,
+    files: Record<string, string>,
+  ) => string;
   readonly makeSkill: (name: string, files: Record<string, string>) => Skill;
   readonly cleanup: () => void;
 };
@@ -38,7 +41,10 @@ export type TempWorkspace = {
 export const createTempWorkspace = (): TempWorkspace => {
   const root = mkdtempSync(join(tmpdir(), "skills-check-"));
 
-  const makeSkillDir = (name: string, files: Record<string, string>): string => {
+  const makeSkillDir = (
+    name: string,
+    files: Record<string, string>,
+  ): string => {
     const dir = join(root, name);
     mkdirSync(dir, { recursive: true });
     for (const [relativePath, content] of Object.entries(files)) {

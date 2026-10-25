@@ -14,9 +14,14 @@ export interface State {
   env: Env;
 }
 
-// simple commandごとに、その呼び出しが実行される有効CWDとともに呼ばれる。
-// cmdはunbashのCommandノード(name/suffix/prefix/redirectsを持つ)。
+/*
+ * simple commandごとに、その呼び出しが実行される有効CWDとともに呼ばれる。
+ * cmdはunbashのCommandノード(name/suffix/prefix/redirectsを持つ)。
+ */
 export type Collect = (cmd: Command, cwd: Cwd) => void;
 
 export const cloneEnv = (env: Env): Env => new Map(env);
-export const cloneState = (s: State): State => ({ cwd: s.cwd, env: new Map(s.env) });
+export const cloneState = (s: State): State => ({
+  cwd: s.cwd,
+  env: new Map(s.env),
+});

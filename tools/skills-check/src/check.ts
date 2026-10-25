@@ -11,15 +11,23 @@ export const checkSkill = (inputDir: string): Problem[] => {
   const skillName = skillNameOf(inputDir);
 
   const location = loadSkillLocation(inputDir);
-  if (location.isErr()) return [{ skillName, ...location.unwrapErr() }];
+  if (location.isErr()) {
+    return [{ skillName, ...location.unwrapErr() }];
+  }
 
   const loaded = readSkillMd(location.unwrap());
-  if (loaded.isErr()) return loaded.unwrapErr().map((finding) => ({ skillName, ...finding }));
+  if (loaded.isErr()) {
+    return loaded.unwrapErr().map((finding) => ({ skillName, ...finding }));
+  }
 
-  return validate(loaded.unwrap()).map((finding) => ({ skillName, ...finding }));
+  return validate(loaded.unwrap())
+    .map((finding) => ({ skillName, ...finding }));
 };
 
-export const checkSkillsRoot = (root: string): Problem[] => readdirSync(root, { withFileTypes: true })
+export const checkSkillsRoot = (root: string): Problem[] => readdirSync(
+  root,
+  { withFileTypes: true },
+)
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)
   .sort()

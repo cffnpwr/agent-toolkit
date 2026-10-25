@@ -4,7 +4,9 @@ const RECOMMENDED_MAX_LINES = 500;
 
 export const bodyLineCountRule: Rule = (skill) => {
   const lines = skill.content.split("\n").length;
-  if (lines <= RECOMMENDED_MAX_LINES) return [];
+  if (lines <= RECOMMENDED_MAX_LINES) {
+    return [];
+  }
 
   return [{
     code: "body-too-many-lines",

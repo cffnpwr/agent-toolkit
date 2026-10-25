@@ -2,8 +2,12 @@ import type { Rule } from "../types.ts";
 
 import { declaredSchema } from "../skill-md.ts";
 
-/** `declaredSchema`はインデックスシグネチャを持たないため、`props`は宣言済みキーだけを返す。 */
-export const SPEC_FIELDS: readonly string[] = declaredSchema.props.map((prop) => prop.key);
+/**
+ * `declaredSchema`はインデックスシグネチャを持たないため、
+ * `props`は宣言済みキーだけを返す。
+ */
+export const SPEC_FIELDS: readonly string[] = declaredSchema.props
+  .map((prop) => prop.key);
 
 /**
  * 拒否する経路と無視する経路の両方があるため、メッセージでは処理系を限定しない。
@@ -13,7 +17,9 @@ export const SPEC_FIELDS: readonly string[] = declaredSchema.props.map((prop) =>
 export const extraFieldsRule: Rule = (skill) => {
   const extra = Object.keys(skill.frontmatter)
     .filter((key) => !SPEC_FIELDS.includes(key));
-  if (extra.length === 0) return [];
+  if (extra.length === 0) {
+    return [];
+  }
 
   return [{
     code: "extra-fields",

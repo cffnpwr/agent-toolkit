@@ -7,7 +7,9 @@ const RECOMMENDED_MAX_TOKENS = 5000;
 export const bodyTokenCountRule: Rule = (skill) => {
   // Agent Skills仕様はベンダ中立でトークナイザを規定していないため、この数値は近似値。
   const tokens = encode(skill.content).length;
-  if (tokens <= RECOMMENDED_MAX_TOKENS) return [];
+  if (tokens <= RECOMMENDED_MAX_TOKENS) {
+    return [];
+  }
 
   return [{
     code: "body-too-many-tokens",

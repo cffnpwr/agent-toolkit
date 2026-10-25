@@ -15,8 +15,10 @@ import { analyzeChain } from "./command.ts";
 import { extractCommand, isObject } from "./input.ts";
 import { buildDenyMessage } from "./suggest.ts";
 
-// 拒否decision。Codexはdecisionの未知フィールドを不正として扱う(deny_unknown_fields)ため、
-// 両Harnessが解釈するbehavior・message以外を入れない。
+/*
+ * 拒否decision。Codexはdecisionの未知フィールドを不正として扱う(deny_unknown_fields)ため、
+ * 両Harnessが解釈するbehavior・message以外を入れない。
+ */
 const deny = (message: string): void => {
   process.stdout.write(`${JSON.stringify({
     hookSpecificOutput: {
@@ -28,13 +30,19 @@ const deny = (message: string): void => {
 
 const run = async (): Promise<void> => {
   const parsed: unknown = JSON.parse(await Bun.stdin.text());
-  if (!isObject(parsed)) return;
+  if (!isObject(parsed)) {
+    return;
+  }
 
   const command = extractCommand(parsed);
-  if (command === undefined) return;
+  if (command === undefined) {
+    return;
+  }
 
   const analysis = analyzeChain(command);
-  if (analysis.violations.length === 0) return;
+  if (analysis.violations.length === 0) {
+    return;
+  }
 
   deny(buildDenyMessage(analysis));
 };

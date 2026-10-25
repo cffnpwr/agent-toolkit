@@ -41,14 +41,25 @@ describe("cdTarget", () => {
     { name: "HOME未設定の引数無しcd", src: "cd", cwd: "/base", env: new Map<string, string | null>() },
     { name: "未定義変数への移動", src: "cd $UNDEF", cwd: "/base", env: new Map<string, string | null>() },
     { name: "CWD不明での相対移動", src: "cd sub", cwd: null, env: new Map<string, string | null>() },
-  ])("[negative] $name のときtarget=nullを返す", ({ src, cwd, env }: { src: string; cwd: Cwd; env: Env; }) => {
-    expect(cdTarget(firstStatement(src), state(cwd, env))).toEqual({ target: null });
+  ])("[negative] $name のときtarget=nullを返す", ({
+    src,
+    cwd,
+    env,
+  }: { src: string; cwd: Cwd; env: Env; }) => {
+    expect(cdTarget(firstStatement(src), state(cwd, env)))
+      .toEqual({ target: null });
   });
 });
 
 describe("applyPrefixAssign", () => {
-  const run = (src: string, env: Env = new Map()): Record<string, string | null> => {
-    for (const a of firstCommand(src).prefix) applyPrefixAssign(a, env);
+  const run = (
+    src: string,
+    env: Env = new Map(),
+  ): Record<string, string | null> => {
+    for (const a of firstCommand(src).prefix) {
+      applyPrefixAssign(a, env);
+    }
+
     return Object.fromEntries(env);
   };
 
@@ -70,8 +81,14 @@ describe("applyPrefixAssign", () => {
 });
 
 describe("applyExportAssign", () => {
-  const run = (src: string, env: Env = new Map()): Record<string, string | null> => {
-    for (const w of firstCommand(src).suffix) applyExportAssign(w, env);
+  const run = (
+    src: string,
+    env: Env = new Map(),
+  ): Record<string, string | null> => {
+    for (const w of firstCommand(src).suffix) {
+      applyExportAssign(w, env);
+    }
+
     return Object.fromEntries(env);
   };
 

@@ -7,20 +7,31 @@ const LINK_PATTERN = /\[[^\]]*\]\(([^)\s]+)\)/g;
 
 const isExternal = (target: string): boolean => (/^[a-z][a-z0-9+.-]*:/i).test(target) || target.startsWith("#");
 
-export const referencedDocumentPaths = (filePath: string, skillDir: string): string[] => {
+export const referencedDocumentPaths = (
+  filePath: string,
+  skillDir: string,
+): string[] => {
   const content = readFileSync(filePath, "utf8");
   const out = new Set<string>();
 
   for (const match of content.matchAll(LINK_PATTERN)) {
     const raw = match[1];
-    if (raw === undefined || isExternal(raw)) continue;
+    if (raw === undefined || isExternal(raw)) {
+      continue;
+    }
 
     const target = raw.split("#")[0]?.split("?")[0];
-    if (!target?.endsWith(".md")) continue;
+    if (!target?.endsWith(".md")) {
+      continue;
+    }
 
     const resolved = resolve(dirname(filePath), target);
-    if (relative(skillDir, resolved).startsWith("..")) continue;
-    if (!existsSync(resolved)) continue;
+    if (relative(skillDir, resolved).startsWith("..")) {
+      continue;
+    }
+    if (!existsSync(resolved)) {
+      continue;
+    }
 
     out.add(resolved);
   }
@@ -46,7 +57,9 @@ export const referenceDepthRule: Rule = (skill) => {
 
   for (const doc of firstLevel) {
     for (const nested of referencedDocumentPaths(doc, skill.dir)) {
-      if (seen.has(nested)) continue;
+      if (seen.has(nested)) {
+        continue;
+      }
       seen.add(nested);
       findings.push(
         violation(`${relative(skill.dir, doc)} → ${relative(skill.dir, nested)}`),

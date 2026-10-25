@@ -20,11 +20,19 @@ const runRaw = (input: string): HookResult => {
     stdout: "pipe",
     stderr: "pipe",
   });
-  return { exitCode: res.exitCode, stdout: res.stdout.toString(), stderr: res.stderr.toString() };
+
+  return {
+    exitCode: res.exitCode,
+    stdout: res.stdout.toString(),
+    stderr: res.stderr.toString(),
+  };
 };
 
 // 合成PreToolUse入力でhook本体を実行する。
-const runHook = (command: string, cwd: string): HookResult => runRaw(JSON.stringify({
+const runHook = (
+  command: string,
+  cwd: string,
+): HookResult => runRaw(JSON.stringify({
   hook_event_name: "PreToolUse",
   tool_name: "Bash",
   tool_input: { command },

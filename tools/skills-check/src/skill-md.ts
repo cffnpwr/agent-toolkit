@@ -51,7 +51,10 @@ type FrontmatterField = keyof typeof declaredSchema.infer;
 
 const specViolation = (code: string, message: string): Finding => ({ code, source: "spec", level: "must", message });
 
-const VIOLATION_BY_FIELD: Record<FrontmatterField, Partial<Record<string, Finding>>> = {
+const VIOLATION_BY_FIELD: Record<
+  FrontmatterField,
+  Partial<Record<string, Finding>>
+> = {
   name: {
     required: specViolation("name-missing", "`name`フィールドが指定されていません。"),
     domain: specViolation("name-not-string", "`name`フィールドは空でない文字列である必要があります。"),
@@ -116,14 +119,21 @@ const METADATA_VALUE_VIOLATION = specViolation(
  *
  * 現在の入力域と`VIOLATION_BY_FIELD`の対応状況では、この経路には到達しない。
  */
-const unknownFieldViolation = (field: string, description: string): Finding => specViolation(
+const unknownFieldViolation = (
+  field: string,
+  description: string,
+): Finding => specViolation(
   "frontmatter-field-invalid",
   `\`${field}\`の値が不正です。error: ${description}`,
 );
 
-const isFrontmatterField = (field: string): field is FrontmatterField => field in VIOLATION_BY_FIELD;
+const isFrontmatterField = (
+  field: string,
+): field is FrontmatterField => field in VIOLATION_BY_FIELD;
 
-const readFrontmatterYaml = (content: string): Result<Record<string, YamlValue>, Finding> => {
+const readFrontmatterYaml = (
+  content: string,
+): Result<Record<string, YamlValue>, Finding> => {
   const match = FRONTMATTER_PATTERN.exec(content);
   // 中身が空のフロントマターは match[1] が空文字列になる。真偽値で判定しない。
   if (match === null) {
@@ -135,8 +145,10 @@ const readFrontmatterYaml = (content: string): Result<Record<string, YamlValue>,
 
   let parsed: unknown;
   try {
-    // 既定はYAML 1.1のタグを解決し、Date・Uint8Array・Set・Mapを返しうる。
-    // フロントマターの値域をYAML 1.2 coreスキーマ（null・真偽値・数値・文字列・配列・マップ）に限るため無効化する。
+    /*
+     * 既定はYAML 1.1のタグを解決し、Date・Uint8Array・Set・Mapを返しうる。
+     * フロントマターの値域をYAML 1.2 coreスキーマ（null・真偽値・数値・文字列・配列・マップ）に限るため無効化する。
+     */
     parsed = parseYaml(match[1] ?? "", { resolveKnownTags: false });
   } catch (error) {
     return Err(specViolation(
@@ -152,17 +164,25 @@ const readFrontmatterYaml = (content: string): Result<Record<string, YamlValue>,
     ));
   }
 
-  // resolveKnownTags: false により値域はYAML 1.2 coreスキーマに限られる。
-  // 値が実際にYamlValueの範囲へ収まるかは、後続のスキーマ検査が全値を検証する。
+  /*
+   * resolveKnownTags: false により値域はYAML 1.2 coreスキーマに限られる。
+   * 値が実際にYamlValueの範囲へ収まるかは、後続のスキーマ検査が全値を検証する。
+   */
   return Ok(parsed as Record<string, YamlValue>);
 };
 
-export const parseFrontmatter = (content: string): Result<typeof frontmatterSchema.infer, Finding[]> => {
+export const parseFrontmatter = (
+  content: string,
+): Result<typeof frontmatterSchema.infer, Finding[]> => {
   const yamlResult = readFrontmatterYaml(content);
-  if (yamlResult.isErr()) return Err([yamlResult.unwrapErr()]);
+  if (yamlResult.isErr()) {
+    return Err([yamlResult.unwrapErr()]);
+  }
 
   const result = frontmatterSchema(yamlResult.unwrap());
-  if (!(result instanceof type.errors)) return Ok(result);
+  if (!(result instanceof type.errors)) {
+    return Ok(result);
+  }
 
   const byCode = new Map<string, Finding>();
   for (const raw of result) {
@@ -173,7 +193,9 @@ export const parseFrontmatter = (content: string): Result<typeof frontmatterSche
         byCode.set(METADATA_VALUE_VIOLATION.code, METADATA_VALUE_VIOLATION);
         continue;
       }
-      const violation = isFrontmatterField(field) ? VIOLATION_BY_FIELD[field][error.code] : undefined;
+      const violation = isFrontmatterField(field)
+        ? VIOLATION_BY_FIELD[field][error.code]
+        : undefined;
       if (violation !== undefined) {
         byCode.set(violation.code, violation);
         continue;
@@ -185,17 +207,25 @@ export const parseFrontmatter = (content: string): Result<typeof frontmatterSche
   }
 
   // 値が空のときは空であることだけを報告する。
-  if (byCode.has("name-not-string")) byCode.delete("name-invalid-format");
-  if (byCode.has("description-not-string")) byCode.delete("description-too-long");
+  if (byCode.has("name-not-string")) {
+    byCode.delete("name-invalid-format");
+  }
+  if (byCode.has("description-not-string")) {
+    byCode.delete("description-too-long");
+  }
 
   return Err([...byCode.values()]);
 };
 
-export const readSkillMd = (location: SkillLocation): Result<Skill, Finding[]> => {
+export const readSkillMd = (
+  location: SkillLocation,
+): Result<Skill, Finding[]> => {
   const content = readFileSync(location.skillMdPath, "utf8");
 
   const frontmatter = parseFrontmatter(content);
-  if (frontmatter.isErr()) return Err(frontmatter.unwrapErr());
+  if (frontmatter.isErr()) {
+    return Err(frontmatter.unwrapErr());
+  }
 
   return Ok({ ...location, content, frontmatter: frontmatter.unwrap() });
 };

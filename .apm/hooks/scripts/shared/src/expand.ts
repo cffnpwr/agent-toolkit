@@ -12,8 +12,11 @@ const DEFAULT_OPS = new Set([":-", "-", ":=", "="]);
 
 // 変数名を現在のenvで引く。未定義・解決不能・特殊パラメータはnull。
 export const lookupVar = (name: string, env: Env): string | null => {
-  if (!IDENT.test(name)) return null;
+  if (!IDENT.test(name)) {
+    return null;
+  }
   const v = env.get(name);
+
   return typeof v === "string" ? v : null;
 };
 
@@ -24,16 +27,23 @@ const expandParts = (
 ): string | null => {
   let out = "";
   for (const part of parts) {
-    // eslint-disable-next-line @typescript-eslint/no-use-before-define -- expandPartとの相互再帰。実行時呼び出しで全束縛が初期化済みのため未定義参照は起きない
+    // expandPartとの相互再帰。実行時呼び出しで全束縛が初期化済みのため未定義参照は起きない
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const piece = expandPart(part, env);
-    if (piece === null) return null;
+    if (piece === null) {
+      return null;
+    }
     out += piece;
   }
+
   return out;
 };
 
 // 単一partを展開する。解決不能(コマンド置換・算術・グロブ・未定義変数等)はnull。
-const expandPart = (part: DoubleQuotedChild | WordPart, env: Env): string | null => {
+const expandPart = (
+  part: DoubleQuotedChild | WordPart,
+  env: Env,
+): string | null => {
   switch (part.type) {
     case "Literal":
     case "SingleQuoted":
@@ -47,7 +57,9 @@ const expandPart = (part: DoubleQuotedChild | WordPart, env: Env): string | null
       return lookupVar(part.text.slice(1), env);
     case "ParameterExpansion": {
       const name = part.parameter;
-      if (!IDENT.test(name)) return null;
+      if (!IDENT.test(name)) {
+        return null;
+      }
       const val = env.has(name) ? env.get(name) : undefined;
       const op = part.operator;
       if (op === undefined) {
@@ -56,14 +68,19 @@ const expandPart = (part: DoubleQuotedChild | WordPart, env: Env): string | null
       }
       if (DEFAULT_OPS.has(op)) {
         // ${VAR:-def}/${VAR-def}/${VAR:=def}/${VAR=def}
-        if (val === null) return null; // 既知だが解決不能 → 既定値を選べない
+        if (val === null) {
+          return null;
+        } // 既知だが解決不能 → 既定値を選べない
         const colon = op.startsWith(":");
         if (val === undefined || (colon && val === "")) {
-          // eslint-disable-next-line @typescript-eslint/no-use-before-define -- expandWordとの相互再帰。実行時呼び出しで全束縛が初期化済みのため未定義参照は起きない
+          // expandWordとの相互再帰。実行時呼び出しで全束縛が初期化済みのため未定義参照は起きない
+          // eslint-disable-next-line @typescript-eslint/no-use-before-define
           return part.operand ? expandWord(part.operand, env) : "";
         }
+
         return val;
       }
+
       // その他の演算子(:+・#・%・/等)は解決不能。
       return null;
     }
@@ -75,6 +92,7 @@ const expandPart = (part: DoubleQuotedChild | WordPart, env: Env): string | null
       return null;
     default: {
       const exhaustive: never = part;
+
       return exhaustive;
     }
   }
@@ -84,15 +102,24 @@ const expandPart = (part: DoubleQuotedChild | WordPart, env: Env): string | null
 const expandTilde = (value: string, env: Env): string | null => {
   if (value === "~" || value.startsWith("~/")) {
     const home = lookupVar("HOME", env);
-    if (home === null) return null;
+    if (home === null) {
+      return null;
+    }
+
     return value === "~" ? home : home + value.slice(1);
   }
-  if (value.startsWith("~")) return null;
+  if (value.startsWith("~")) {
+    return null;
+  }
+
   return value;
 };
 
 // Wordを現在のenvで展開する。partsが無ければ純リテラル(先頭チルダのみ展開)。
 export const expandWord = (word: Word, env: Env): string | null => {
-  if (word.parts === undefined) return expandTilde(word.value, env);
+  if (word.parts === undefined) {
+    return expandTilde(word.value, env);
+  }
+
   return expandParts(word.parts, env);
 };

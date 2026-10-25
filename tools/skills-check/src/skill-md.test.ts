@@ -139,7 +139,9 @@ describe("parseFrontmatter", () => {
     expect(result.isErr()).toBeTrue();
     const findings = result.unwrapErr();
     // 順序は保証されないため、codeで揃えてから照合する
-    expect([...findings].sort((a, b) => a.code.localeCompare(b.code))).toMatchObject([
+    expect(
+      [...findings].sort((a, b) => a.code.localeCompare(b.code)),
+    ).toMatchObject([
       { code: "description-missing", source: "spec", level: "must" },
       { code: "name-missing", source: "spec", level: "must" },
     ]);
@@ -319,7 +321,9 @@ describe("readSkillMd", () => {
     expect(result.isErr()).toBeTrue();
     const value = result.unwrapErr();
     // 順序は保証されないため、codeで揃えてから照合する
-    expect([...value].sort((a, b) => a.code.localeCompare(b.code))).toMatchObject([
+    expect(
+      [...value].sort((a, b) => a.code.localeCompare(b.code)),
+    ).toMatchObject([
       { code: "description-missing", source: "spec", level: "must" },
       { code: "name-missing", source: "spec", level: "must" },
     ]);

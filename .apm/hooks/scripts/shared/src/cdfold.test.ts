@@ -5,10 +5,14 @@ import type { Collect, Cwd } from "./types.ts";
 import { foldCwd, resolveBaseCwd } from "./cdfold.ts";
 import { parseCommands } from "./test-support.ts";
 
-const collectFoldCwd = (src: string, baseCwd: Cwd): Array<[string | undefined, Cwd]> => {
+const collectFoldCwd = (
+  src: string,
+  baseCwd: Cwd,
+): Array<[string | undefined, Cwd]> => {
   const out: Array<[string | undefined, Cwd]> = [];
   const collect: Collect = (cmd, cwd) => out.push([cmd.name?.value, cwd]);
   foldCwd(parseCommands(src), baseCwd, collect);
+
   return out;
 };
 
@@ -17,10 +21,16 @@ describe("foldCwd", () => {
   const savedTestVar = process.env.CDFOLD_TEST_DIR;
 
   afterEach(() => {
-    if (savedProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
-    else process.env.CLAUDE_PROJECT_DIR = savedProjectDir;
-    if (savedTestVar === undefined) delete process.env.CDFOLD_TEST_DIR;
-    else process.env.CDFOLD_TEST_DIR = savedTestVar;
+    if (savedProjectDir === undefined) {
+      delete process.env.CLAUDE_PROJECT_DIR;
+    } else {
+      process.env.CLAUDE_PROJECT_DIR = savedProjectDir;
+    }
+    if (savedTestVar === undefined) {
+      delete process.env.CDFOLD_TEST_DIR;
+    } else {
+      process.env.CDFOLD_TEST_DIR = savedTestVar;
+    }
   });
 
   it("[positive] baseCwd基準でcd後の有効CWDを引き回す", () => {
@@ -43,8 +53,11 @@ describe("resolveBaseCwd", () => {
   const savedProjectDir = process.env.CLAUDE_PROJECT_DIR;
 
   afterEach(() => {
-    if (savedProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
-    else process.env.CLAUDE_PROJECT_DIR = savedProjectDir;
+    if (savedProjectDir === undefined) {
+      delete process.env.CLAUDE_PROJECT_DIR;
+    } else {
+      process.env.CLAUDE_PROJECT_DIR = savedProjectDir;
+    }
   });
 
   it("[positive] input.cwdが非空stringのときそれを返す", () => {

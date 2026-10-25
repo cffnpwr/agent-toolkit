@@ -16,7 +16,10 @@ describe("extraFieldsRule", () => {
   });
 
   test("[positive] 仕様が定めるフィールドをすべて備えているとき問題を報告しない", () => {
-    // Given: 仕様が定める6フィールド（name・description・license・compatibility・metadata・allowed-tools）をすべて持つ
+    /*
+     * Given: 仕様が定める6フィールド
+     * （name・description・license・compatibility・metadata・allowed-tools）をすべて持つ
+     */
     const frontmatter = {
       name: "sample-skill",
       description: VALID_DESCRIPTION,
@@ -46,7 +49,9 @@ describe("extraFieldsRule", () => {
 
   test("[negative] 複数の仕様外フィールドがあるとき宣言順に列挙してメッセージに含める", () => {
     // Given / When
-    const findings = extraFieldsRule(skillOf({ frontmatter: { ...BASE, zeta: 1, alpha: 2 } }));
+    const findings = extraFieldsRule(
+      skillOf({ frontmatter: { ...BASE, zeta: 1, alpha: 2 } }),
+    );
 
     // Then
     expect(findings).toMatchObject([{ code: "extra-fields", source: "spec", level: "should" }]);
