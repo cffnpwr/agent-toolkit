@@ -4,6 +4,8 @@
   "description": "Japanese text linting using textlint",
   "private": true,
   "dependencies": {
+    "@cffnpwr/textlint-filter-rule-code-comments": "1.0.0",
+    "@cffnpwr/textlint-plugin-comments": "1.0.0",
     "@cffnpwr/textlint-rule-preset-ja-writing-extras": "1.1.2",
     "@textlint-ja/textlint-rule-no-dropping-i": "3.0.0",
     "@textlint-ja/textlint-rule-no-insert-dropping-sa": "2.0.1",
@@ -17,7 +19,6 @@
     "textlint-rule-period-in-list-item": "1.0.1",
     "textlint-rule-prefer-tari-tari": "1.0.3",
     "textlint-rule-preset-ja-spacing": "3.0.4",
-    "textlint-rule-no-mixed-zenkaku-and-hankaku-alphabet": "1.0.1",
     "textlint-rule-preset-ja-technical-writing": "12.0.2",
     "textlint-rule-prh": "6.1.1",
     "textlint": "15.8.0"
