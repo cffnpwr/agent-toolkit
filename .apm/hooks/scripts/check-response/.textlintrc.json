@@ -12,7 +12,11 @@
         "strict": false
       }
     },
-    "@textlint-ja/preset-ai-writing": true,
+    "@textlint-ja/preset-ai-writing": {
+      "ai-tech-writing-guideline": {
+        "enableDocumentAnalysis": false
+      }
+    },
     "@cffnpwr/preset-ja-writing-extras": true,
     "preset-ja-spacing": {
       "ja-space-after-exclamation": false,

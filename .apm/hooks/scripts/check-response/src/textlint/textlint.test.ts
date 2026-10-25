@@ -11,7 +11,7 @@ describe("createResponseLinter", () => {
     mock.restore();
   });
 
-  it("[positive] hookの設定に形態素解析の規則を加えてtextlintを作り、errorを確定、warningを判定が必要な指摘として、その行の本文付きで返す", async () => {
+  it("[positive] hookの設定に形態素解析の規則を加えてtextlintを作り、errorを確定、warningと設定のseverityを反映しない規則のerrorを判定が必要な指摘として、その行の本文付きで返す", async () => {
     const configRule = { ruleId: "prh", rule: () => ({}), options: { severity: "warning" } };
     const merged = { rules: "merged" };
     const shallowMerge = mock((_args: unknown) => merged);
@@ -27,6 +27,7 @@ describe("createResponseLinter", () => {
         { ruleId: "info-rule", message: "line 3", severity: 3, loc: { start: { line: 3 } } },
         { ruleId: "off-rule", message: "line 3", severity: 0, loc: { start: { line: 3 } } },
         { ruleId: "out-of-text", message: "line 5", severity: 2, loc: { start: { line: 5 } } },
+        { ruleId: "@textlint-ja/ai-writing/ai-tech-writing-guideline", message: "line 2", severity: 2, loc: { start: { line: 2 } } },
       ],
     }));
     const loadTextlintrc = spyOn(textlint, "loadTextlintrc").mockResolvedValue(descriptor as never);
@@ -39,6 +40,7 @@ describe("createResponseLinter", () => {
       { certainty: "needs-judgment", line: 1, lineText: "一行目", ruleId: "warning-rule", message: "line 1" },
       { certainty: "confirmed", line: 2, lineText: "二行目", ruleId: "error-rule", message: "line 2" },
       { certainty: "confirmed", line: 5, lineText: "", ruleId: "out-of-text", message: "line 5" },
+      { certainty: "needs-judgment", line: 2, lineText: "二行目", ruleId: "@textlint-ja/ai-writing/ai-tech-writing-guideline", message: "line 2" },
     ]);
     expect(loadTextlintrc.mock.calls).toEqual([[{ configFilePath: fileURLToPath(new URL("../../.textlintrc.json", import.meta.url)) }]]);
     expect(shallowMerge.mock.calls).toEqual([

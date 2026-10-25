@@ -14,6 +14,9 @@ const ERROR_SEVERITY = 2;
 
 const RESPONSE_FILE_NAME = "response.md";
 
+// 設定のseverityを反映しない形式で報告するため、severityに関係なく判定が必要な指摘とする規則
+const NEEDS_JUDGMENT_RULE_IDS = new Set(["@textlint-ja/ai-writing/ai-tech-writing-guideline"]);
+
 interface TextlintMessage {
   ruleId: string;
   message: string;
@@ -35,9 +38,9 @@ export interface TextlintFinding {
 }
 
 const certaintyOf = (
-  severity: number,
+  { severity, ruleId }: TextlintMessage,
 ): Certainty[] => match(severity)
-  .with(ERROR_SEVERITY, (): Certainty[] => ["confirmed"])
+  .with(ERROR_SEVERITY, (): Certainty[] => [NEEDS_JUDGMENT_RULE_IDS.has(ruleId) ? "needs-judgment" : "confirmed"])
   .with(WARNING_SEVERITY, (): Certainty[] => ["needs-judgment"])
   // severityがinfo・offの指摘は対象外
   .otherwise(() => []);
@@ -48,7 +51,7 @@ const toTextlintFindings = (
 ): TextlintFinding[] => {
   const lines = text.split("\n");
 
-  return messages.flatMap((message) => certaintyOf(message.severity)
+  return messages.flatMap((message) => certaintyOf(message)
     .map((certainty) => ({
       certainty,
       line: message.loc.start.line,
