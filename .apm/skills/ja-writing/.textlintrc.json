@@ -1,7 +1,12 @@
 {
-  "filters": {},
+  "filters": {
+    "@cffnpwr/code-comments": {
+      "ignoredRules": ["ja-technical-writing/ja-no-mixed-period"]
+    }
+  },
   "plugins": {
-    "latex2e": true
+    "latex2e": true,
+    "@cffnpwr/comments": true
   },
   "rules": {
     "preset-ja-technical-writing": {

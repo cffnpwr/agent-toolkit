@@ -4,6 +4,8 @@
   "description": "Japanese text linting using textlint",
   "private": true,
   "dependencies": {
+    "@cffnpwr/textlint-filter-rule-code-comments": "1.0.0",
+    "@cffnpwr/textlint-plugin-comments": "1.0.0",
     "@cffnpwr/textlint-rule-preset-ja-writing-extras": "1.1.2",
     "@textlint-ja/textlint-rule-no-dropping-i": "3.0.0",
     "@textlint-ja/textlint-rule-no-insert-dropping-sa": "2.0.1",

@@ -38,6 +38,9 @@ textlintとAIレビューは、どちらもファイルを対象にする。
 リポジトリの規約に一時ファイルを置くディレクトリの定めが無い場合は、そのディレクトリをユーザーに確認する。
 コミットメッセージ・Issue・Pull Requestの本文のようにファイルが無い文章は、作業中のリポジトリで一時ファイルを置くディレクトリにMarkdownファイルとして書き出す。
 
+対応する拡張子（[@cffnpwr/textlint-plugin-comments](https://github.com/cffnpwr/textlint-plugin-comments/blob/main/packages/plugin-comments/README-ja.md#対応する言語)）のソースコード・設定ファイルは、textlintがコメントの部分だけを検査する。
+対応していない拡張子のファイルのコメントは、Markdownファイルに書き出して検査する。
+
 ### 2. textlintで検査する
 
 次のコマンドは、このSKILL.mdがあるディレクトリで実行する。
@@ -73,6 +76,8 @@ textlintのエラーを修正した後、レビューするエージェントに
 
 - `references/review-prompt.md`の規則に従って、検査対象のファイルをレビューすること
 - `references/review-prompt.md`の「出力」の節が定める形式に従って、結果を返すこと
+
+検査対象がソースコード・設定ファイルの場合は、コメントの部分だけをレビューすることも指示する。
 
 ### 4. 指摘に対応する
 
