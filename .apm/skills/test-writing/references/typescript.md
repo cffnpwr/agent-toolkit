@@ -1,117 +1,197 @@
-# TypeScript のテスト
+# TypeScript
 
-言語非依存の方針（[SKILL.md](../SKILL.md)）を前提に、TypeScript 固有の手順を示す。
+## テストランナー
 
-## ランナー
+bunを使うプロジェクトでは`bun test`を使い、それ以外では`vitest`を使う。
 
-対象プロジェクトが bun を使う（`bun.lock`／`bun.lockb`／`bunfig.toml` がある。`bun.lock` は 1.2 以降のテキスト、`bun.lockb` は 1.2 未満のバイナリ既定）なら `bun test`、それ以外は `vitest` を使う。両者とも `describe` / `it` / `expect`・`test.each`・組み込みモックを備え、API はおおむね共通。
+### 良い例
 
 ```sh
-# bun
+# bunを使用する場合
 bun test
-bun test <path>
-
-# vitest
-npx vitest run              # 単発実行
-npx vitest                  # watch
-npx vitest run <path>
 ```
 
-## 配置
+### 悪い例
 
-テスト対象ファイルの隣にコロケートする（`foo.ts` に対し `foo.test.ts`）。vitest / bun どちらのデフォルト検出にも乗る。
+```sh
+# bunを使用する場合
+npx vitest run
+```
 
-TypeScript は export されていない関数を import できないため、「ロジックを持つ private をテストする」場合は、まず public 経路経由で分岐を通せないか試す。難しければその要素を export するが、テストのための re-export をモジュール境界の外へ漏らさない（public API を汚さない）。
+## テストの配置
 
-## スタイル（BDD）
+- テストファイルはテスト対象ファイルの隣に置く
+- privateな関数はpublicな経路でテストする
+- publicな経路で分岐を通せない場合は関数をexportする
+- exportした関数はモジュール外へre-exportしない
 
-テスト対象ごとに `describe` を分け、`it` でケースを書く。Given-When-Then で本体を組む。
+### 良い例
+
+```text
+src
+├── parser.test.ts
+└── parser.ts
+```
+
+### 悪い例
+
+```text
+.
+├── src
+│   └── parser.ts
+└── test
+    └── parser.test.ts
+```
+
+## 構造
+
+テスト対象ごとに`describe`を分け、ケースごとに`it`を書く。
+
+### 良い例
 
 ```ts
-import { describe, it, expect } from "vitest"; // bun の場合は "bun:test"
+import { describe, it, expect } from "vitest";
 import { parse } from "./parser";
 
 describe("parse", () => {
   it("[positive] 数字のみのとき数値へ変換する", () => {
-    const input = "42";              // Given
-    const result = parse(input);     // When
-    expect(result).toBe(42);         // Then
+    const input = "42";
+
+    const result = parse(input);
+
+    expect(result).toBe(42);
   });
 
-  it("[negative] 空文字のとき ParseError を投げる", () => {
-    // 型（クラス）まで検証する。メッセージは見ない
+  it("[negative] 空文字のときParseErrorを投げる", () => {
     expect(() => parse("")).toThrow(ParseError);
   });
 });
 ```
 
-`it` の名前は `[positive] ` / `[negative] ` を prefix に付け、「A が B のとき C」の形で入力条件と期待結果を書く。
+### 悪い例
 
-- **正常系は期待値全体との完全一致で検証する。** オブジェクトは `expect(result).toEqual(expected)` で全体を突き合わせる（プリミティブは `toBe`）。フィールドごとに `expect` を並べない。
-- **異常系はエラーの型・種別まで検証する。** スロー検証は `expect(fn).toThrow(ErrorClass)`（クラスを渡すと instanceof 判定）、値を直接持つ場合は `expect(err).toBeInstanceOf(ErrorClass)`。**メッセージ文字列は渡さない**（`toThrow("...")` はメッセージ照合になり脆い）。
+```ts
+describe("parser", () => {
+  it("works", () => {
+    expect(parse("42")).toBe(42);
+    expect(() => parse("")).toThrow(ParseError);
+    expect(format(42)).toBe("42");
+  });
+});
+```
 
-### パラメタライズ
+## 正常系の検証
 
-同一ロジックを複数入力で回すケースは `test.each` / `it.each`（両ランナー組み込み）を使う。
+オブジェクトは`toEqual`で全体を比較し、プリミティブは`toBe`で比較する。
+
+### 良い例
+
+```ts
+expect(parseConfig(text)).toEqual({ limit: 10, minSize: 0 });
+```
+
+### 悪い例
+
+```ts
+const config = parseConfig(text);
+expect(config.limit).toBe(10);
+expect(config.minSize).toBe(0);
+```
+
+## 異常系の検証
+
+- `toThrow`・`toBeInstanceOf`にはエラーのクラスを渡す
+- `toThrow`にメッセージの文字列を渡さない
+
+### 良い例
+
+```ts
+expect(() => parse("")).toThrow(ParseError);
+```
+
+### 悪い例
+
+```ts
+expect(() => parse("")).toThrow("input is empty");
+```
+
+## パラメタライズ
+
+同じ検証を入力だけ変えて実行する場合は、`it.each`を使う。
+
+### 良い例
 
 ```ts
 it.each([
   { in: "42", want: 42 },
   { in: "0", want: 0 },
-])("[positive] $in のとき $want へ変換する", ({ in: input, want }) => {
+])("[positive] 入力「$in」のとき「$want」へ変換する", ({ in: input, want }) => {
   expect(parse(input)).toBe(want);
 });
 ```
 
-## 境界モック
+### 悪い例
 
-- **モジュール / 関数境界はランナー組み込みで差し替える。** 関数は vitest の `vi.fn` / `vi.spyOn`、bun の `mock` / `spyOn`。モジュール全体は vitest の `vi.mock("./module", factory)`、bun の `mock.module("./module", factory)`。
-- **HTTP / ネットワーク境界は `MSW`（Mock Service Worker）を使う。** リクエストをネットワーク層で捕捉し、実装のコードを変えずに応答を差し替える。
-- **時刻・タイマー境界はフェイクタイマーを使う。** vitest は `vi.useFakeTimers()` / `vi.setSystemTime(date)`、bun は `setSystemTime(date)`（`bun:test`）。
+```ts
+it("[positive] 数字のみのとき数値へ変換する", () => {
+  for (const [input, want] of [["42", 42], ["0", 0]] as const) {
+    expect(parse(input)).toBe(want);
+  }
+});
+```
+
+## テストダブル
+
+- 関数・モジュールはランナー組み込みのモック（vitestの`vi.fn`・`vi.spyOn`・`vi.mock`、bunの`mock`・`spyOn`・`mock.module`）で差し替える
+- HTTPはMSW（Mock Service Worker）でネットワーク層の応答を差し替える
+- 時刻はランナー組み込みのフェイクタイマー（vitestの`vi.useFakeTimers`・`vi.setSystemTime`、bunの`setSystemTime`）で差し替える
+
+### 良い例
 
 ```ts
 import { setupServer } from "msw/node";
 import { http, HttpResponse } from "msw";
 
 const server = setupServer(
-  http.get("https://api.example.com/user", () =>
-    HttpResponse.json({ id: 1 }),
-  ),
+  http.get("https://api.example.com/user", () => HttpResponse.json({ id: 1 })),
 );
-// beforeAll(() => server.listen()) / afterAll(() => server.close())
 ```
 
-内部モジュール同士はモックせず実物で繋ぐ。
+### 悪い例
+
+```ts
+vi.spyOn(globalThis, "fetch").mockResolvedValue(
+  new Response(JSON.stringify({ id: 1 })),
+);
+```
 
 ## カバレッジ
 
-### vitest（C1 計測可）
+- vitestではC1カバレッジを`branches`のthresholdで検査する
+- `lines`・`statements`・`functions`を一律100%にせず、テストしないコードを`exclude`で除外する
+- `bun test`はC1カバレッジを計測できないため、手動で担保する
 
-`--coverage` で分岐カバレッジを含めて計測できる。プロバイダは `v8`（既定）と `istanbul` があり、どちらも branch を報告する。
-
-```sh
-npx vitest run --coverage
-```
-
-`vitest.config.ts` で threshold を設定する。C1 は `branches` で見る。SKILL.md の方針どおりテストしないコード（単純コード・IO 境界など）が存在するため、`lines` / `statements` / `functions` の目標を一律 100% にはせず、`exclude` で対象外を除いたうえで妥当な値にする。
+### 良い例
 
 ```ts
-import { defineConfig } from "vitest/config";
-
 export default defineConfig({
   test: {
     coverage: {
-      exclude: ["**/*.config.ts"], // テスト対象外を除く
+      exclude: ["**/*.config.ts"],
       thresholds: { branches: 100 },
     },
   },
 });
 ```
 
-### bun test（C1 計測不可）
+### 悪い例
 
-`bun test --coverage` は functions / lines のみ報告し、**分岐カバレッジには対応していない**（[oven-sh/bun#7100](https://github.com/oven-sh/bun/issues/7100)、未解決）。SKILL.md の「C1 を求められたときの手順」に従い、各分岐の真・偽双方を通すケースを人手で用意して C1 を担保する。
-
-```sh
-bun test --coverage
+```ts
+export default defineConfig({
+  test: {
+    coverage: {
+      thresholds: { lines: 100, statements: 100, functions: 100, branches: 100 },
+    },
+  },
+});
 ```
