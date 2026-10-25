@@ -171,9 +171,9 @@ describe("toVerificationReviewInput", () => {
   });
 
   it.each([
-    { name: "2000文字", result: "a".repeat(2000), want: "a".repeat(2000) },
-    { name: "2001文字", result: `${"a".repeat(1000)}m${"z".repeat(1000)}`, want: `${"a".repeat(1000)}\n[1 characters omitted]\n${"z".repeat(1000)}` },
-  ])("[positive] 結果が$nameのとき、先頭と末尾の1000文字ずつを残し、2000文字を超えた分を省いた文字数の表記に置き換える", ({ result, want }) => {
+    { name: "20000文字", result: "a".repeat(20_000), want: "a".repeat(20_000) },
+    { name: "20001文字", result: `${"a".repeat(10_000)}m${"z".repeat(10_000)}`, want: `${"a".repeat(10_000)}\n[1 characters omitted]\n${"z".repeat(10_000)}` },
+  ])("[positive] 結果が$nameのとき、先頭と末尾の10000文字ずつを残し、20000文字を超えた分を省いた文字数の表記に置き換える", ({ result, want }) => {
     const conversation: Conversation = { kind: "no-user-message", events: [{ kind: "tool-call", callId: "c1", name: "Bash", input: "{}", result }] };
 
     const input = toVerificationReviewInput({
@@ -279,6 +279,36 @@ describe("toVerificationReviewInput", () => {
         "</previous-turn-tool-calls>",
       ].join("\n"),
       "<user-message>\n依頼\n</user-message>",
+      "</conversation>",
+      "<textlint-findings-already-reported></textlint-findings-already-reported>",
+    ].join("\n"));
+  });
+
+  it.each([
+    { name: "合計60000文字", count: 3, shortenedCount: 0 },
+    { name: "合計80000文字", count: 4, shortenedCount: 1 },
+  ])("[positive] 20000文字の結果が$nameのとき、合計60000文字に収まる新しい結果を残し、それより古い結果の先頭と末尾の1000文字ずつだけを残す", ({ count, shortenedCount }) => {
+    const names = "abcd".slice(0, count);
+    const conversation: Conversation = {
+      kind: "no-user-message",
+      events: [...names].map((name) => ({ kind: "tool-call", callId: name, name, input: "{}", result: name.repeat(20_000) })),
+    };
+
+    const input = toVerificationReviewInput({
+      conversation,
+      confirmedFindings: [],
+      findingsToJudge: [],
+    });
+
+    expect(input).toBe([
+      "<conversation>",
+      ...[...names].map((name, index) => {
+        const result = index < shortenedCount
+          ? `${name.repeat(1000)}\n[18000 characters omitted]\n${name.repeat(1000)}`
+          : name.repeat(20_000);
+
+        return `<tool-call name="${name}">\n<input>\n{}\n</input>\n<result>\n${result}\n</result>\n</tool-call>`;
+      }),
       "</conversation>",
       "<textlint-findings-already-reported></textlint-findings-already-reported>",
     ].join("\n"));

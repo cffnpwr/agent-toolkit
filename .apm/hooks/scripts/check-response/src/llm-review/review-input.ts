@@ -9,7 +9,11 @@ import { historyOf, previousToolCallsOf, reviewedResponseOf } from "../conversat
 
 const MAX_RESULT_LENGTH = 2_000;
 
-const KEPT_EDGE_LENGTH = MAX_RESULT_LENGTH / 2;
+// 未確認事項の検査で、最後の発言以降のツールの結果に広げる上限
+const MAX_EXPANDED_RESULT_LENGTH = 20_000;
+
+// 広げた上限で渡す、最後の発言以降のツールの結果の合計の文字数の上限
+const MAX_EXPANDED_RESULTS_LENGTH = 60_000;
 
 // 文章の査読に文脈として渡す前のターンの文字数の上限
 const MAX_HISTORY_LENGTH = 12_000;
@@ -31,11 +35,12 @@ export interface ReviewInputSource {
 // 末尾に出る集計・エラーも残すため、先頭と末尾以外を省略
 const truncateToolText = (
   text: string,
-): string => (text.length > MAX_RESULT_LENGTH
+  maxLength: number,
+): string => (text.length > maxLength
   ? [
-    text.slice(0, KEPT_EDGE_LENGTH),
-    `[${text.length - MAX_RESULT_LENGTH} characters omitted]`,
-    text.slice(-KEPT_EDGE_LENGTH),
+    text.slice(0, maxLength / 2),
+    `[${text.length - maxLength} characters omitted]`,
+    text.slice(-maxLength / 2),
   ].join("\n")
   : text);
 
@@ -68,7 +73,7 @@ const toolCallTag = (
 ): string => [
   `<tool-call name="${name}">`,
   tag("input", input),
-  ...(result === undefined ? [] : [tag("result", truncateToolText(result))]),
+  ...(result === undefined ? [] : [tag("result", result)]),
   "</tool-call>",
 ].join("\n");
 
@@ -159,7 +164,7 @@ const previousToolCallTags = (
 ): string[] => match(newestWithin(
   toolCalls.map(({ name, input }) => ({
     name,
-    input: truncateToolText(input),
+    input: truncateToolText(input, MAX_RESULT_LENGTH),
   })),
   ({ input }) => input.length,
   MAX_PREVIOUS_TOOL_CALLS_LENGTH,
@@ -170,12 +175,38 @@ const previousToolCallTags = (
     calls.map(({ name, input }) => toolCallTag(name, input, undefined)).join("\n"),
   )]);
 
+// 新しい結果から順に、合計が上限に収まる分だけ広げた上限で省略
+const withAllottedResults = (
+  events: ConversationEvent[],
+): ConversationEvent[] => {
+  let remainingLength = MAX_EXPANDED_RESULTS_LENGTH;
+  const allotResult = (result: string): string => {
+    const expanded = truncateToolText(result, MAX_EXPANDED_RESULT_LENGTH);
+    if (expanded.length > remainingLength) {
+      return truncateToolText(result, MAX_RESULT_LENGTH);
+    }
+    remainingLength -= expanded.length;
+
+    return expanded;
+  };
+
+  return events
+    .toReversed()
+    .map((event) => match(event)
+      .with({ kind: "tool-call", result: P.string }, (toolCall): ConversationEvent => ({
+        ...toolCall,
+        result: allotResult(toolCall.result),
+      }))
+      .otherwise(() => event))
+    .toReversed();
+};
+
 // 検査の対象は最後の応答のみで、それより前の応答は文脈
 export const toVerificationReviewInput = ({
   conversation,
   confirmedFindings,
 }: ReviewInputSource): string => {
-  const { events } = conversation;
+  const events = withAllottedResults(conversation.events);
   const finalResponseIndex = events.findLastIndex(
     (event) => event.kind === "response",
   );
