@@ -4,7 +4,7 @@ Use this template when the project has no `.github/ISSUE_TEMPLATE/bug*.md` or `.
 
 Reproduction steps are mandatory. Do not omit them.
 
-```markdown
+````markdown
 ## Summary
 [1行で何が起きているかを記述]
 
@@ -29,9 +29,9 @@ Reproduction steps are mandatory. Do not omit them.
 - [その他関連する環境情報]
 
 ## Error Output
-\`\`\`
+```
 [エラーメッセージ、スタックトレース、ログをそのまま貼る]
-\`\`\`
+```
 
 ## Affected Code
 [再現に関わるファイルパスと行番号 — コードベースを読んで判明したもの]
@@ -45,7 +45,7 @@ Reproduction steps are mandatory. Do not omit them.
 
 ## Additional Context
 [関連Issue、最近の変更、再現に役立つ補足情報があれば]
-```
+````
 
 ## Section Rules
 
