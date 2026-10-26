@@ -1,180 +1,181 @@
 ---
 name: issue-creator
-description: Draft and create well-structured GitHub or GitLab issues with consistent formatting and zero implicit assumptions. Use when (1) user wants to file a bug report, feature request, improvement proposal, or task on GitHub or GitLab, (2) user pastes informal notes, error logs, or descriptions and asks to turn them into an issue, (3) user says things like "create an issue", "file a bug", "Issueを立てて", "バグ報告したい", "機能追加のIssueを書いて". Detects platform (GitHub/GitLab) from git remote, prefers project-local issue templates when present, falls back to bundled defaults. Always confirms issue type with user, asks for information that cannot be read from the codebase, and never invents reproduction steps or expected behavior.
+description: >
+  GitHub・GitLabのIssueを、一貫した形式で、暗黙の前提を含めずに作成する。
+  次のときに使う。
+  (1) ユーザーがGitHub・GitLabにバグ報告・機能追加・改善提案・タスクのIssueを登録したいとき。
+  (2) ユーザーが走り書きのメモ・エラーログ・説明を貼り付けて、Issueにしてほしいと依頼したとき。
+  (3) ユーザーが「Issueを立てて」「バグ報告したい」「機能追加のIssueを書いて」「create an issue」「file a bug」のように依頼したとき。
+  プラットフォームの判定、Issueの種類の確認、テンプレートの選択、コードベースから読めない情報の質問、ユーザーの承認を得た後の作成を扱う。
 compatibility: |
   Required: gh CLI (for GitHub), glab CLI (for GitLab), git
   Requires ja-writing skill.
   No language runtime required. All logic is in the SKILL itself; no scripts.
 ---
 
-# Issue Creator
+# Issueの作成
 
-Drafts and creates issues on GitHub or GitLab with consistent format and no implicit assumptions.
+GitHub・GitLabのIssueを、次の方針で作成する。
 
-## Requirements
+- コードベースを読んでもユーザーに質問しても得られない情報は書かない。推測で埋めない
+- ユーザーへ質問する前に、リポジトリから導ける情報（ファイルパス・関数名・依存・設定値・エラーメッセージの出力箇所）を確認する
+- ユーザーが観測した挙動・再現手順・環境・動機・優先度・業務への影響は、コードから分からないため、ユーザーから得る
+- バグ報告の再現手順は省略・要約しない。ユーザーが提供していなければ質問する
+- Issue本文の構成は、選んだテンプレートに厳密に従う
+- Issueを作成する前に、ドラフトと選んだIssueの種類を提示し、明示的な承認を得る。確信が強い場合も、この確認を省略しない
+- ドラフトをユーザーが承認したら、追加確認（ラベルの選択・リポジトリの確認等）を挟まず作成まで進め、結果のURLを報告する
 
-使用前に以下の依存を確認すること。ひとつでも欠けていれば進行を停止し、ユーザーへエスカレーションする。Agentは導入・修正・フォールバックを行わない。
+## 準備
 
-### 外部ツール
+git（2.0以上）がない場合は、作業を止めてユーザーに確認する。
+GitHubのリポジトリでは`gh`（2.0以上）、GitLabのリポジトリでは`glab`（1.0以上）がない場合も、作業を止めてユーザーに確認する。
+本文が日本語の場合に検査で使う`ja-writing`スキルがない場合も、作業を止めてユーザーに確認する。
+外部ツールを自分でインストールしない。
 
-| ツール | バージョン要件 |
-| --- | --- |
-| git | `>= 2.0` |
-| gh | `>= 2.0`（GitHubの場合） |
-| glab | `>= 1.0`（GitLabの場合） |
+## 手順
 
-存在確認コマンドを次に示す。
+### 1. プラットフォームを判定する
 
-```sh
-command -v git >/dev/null 2>&1 || { echo "git not found." >&2; exit 1; }
-# GitHubなら
-command -v gh  >/dev/null 2>&1 || { echo "gh not found." >&2; exit 1; }
-# GitLabなら
-command -v glab >/dev/null 2>&1 || { echo "glab not found." >&2; exit 1; }
-```
-
-### スキル
-
-| スキル | 用途 |
-| --- | --- |
-| ja-writing | 本文が日本語の場合に、ドラフトをユーザーへ提示する前に本文を検査する |
-
-## Core Principles
-
-1. **Never invent facts.** If a piece of information cannot be obtained by reading the codebase or by asking the user, leave it out — do not guess.
-2. **Always read code first.** Before asking the user, check whether the information can be derived from the repository (file paths, function names, dependencies, configuration values, error message origins).
-3. **Always ask for what code cannot tell you.** User-observed behavior, reproduction steps, environment, motivation, priority, business impact — these must come from the user.
-4. **Always confirm intent with the user.** Before creating the issue, present the draft and the chosen issue type, and get explicit approval. Even if you are highly confident, do this confirmation.
-5. **Reproduction steps are mandatory for bugs.** Never abbreviate, summarize, or skip steps. If the user did not provide them, ask.
-6. **Strictly follow the chosen template.** The template defines the structure of the issue body. You MUST use exactly the section headings and ordering defined by the template. Do not omit sections, do not add sections, do not rename sections, do not reorder sections.
-7. **Execute end-to-end after approval.** Once the user approves the draft, proceed straight to issue creation and report the resulting URL. Do not pause for additional confirmations (label selection, repo confirmation, etc.) between approval and creation.
-
-## Workflow
-
-### Step 1: Detect platform and repository context
-
-Run these commands to gather context:
+次のコマンドで、リモートのURLとリポジトリルートを取得する。
 
 ```bash
 git remote get-url origin
 git rev-parse --show-toplevel
 ```
 
-Determine platform from the remote URL:
-- Contains `github.com` → GitHub (use `gh` CLI)
-- Contains `gitlab.` (any host) → GitLab (use `glab` CLI)
-- Otherwise → ask the user which platform
+リモートのURLからプラットフォームを判定する。
 
-For full CLI usage and platform-specific quirks, see [references/platform-detection.md](references/platform-detection.md).
+- `github.com`を含む場合は、GitHub（`gh` CLI）とする
+- `gitlab.`を含む場合（ホストは問わない）は、GitLab（`glab` CLI）とする
+- それ以外の場合は、ユーザーにプラットフォームを確認する
 
-### Step 2: Determine issue type
+CLIの使い方とプラットフォーム固有の差異は[references/platform-detection.md](references/platform-detection.md)を参照する。
 
-Infer the most likely type from the user's input. Map keywords to types:
+### 2. Issueの種類を確認する
 
-| User says (examples) | Type |
-|---|---|
-| "壊れている", "動かない", "エラー", "broken", "crash", "doesn't work" | `bug` |
-| "追加してほしい", "欲しい", "want to add", "feature", "support for" | `feature` |
-| "改善したい", "もっと〜したい", "refactor", "improve", "better" | `improvement` |
-| "タスク", "やる", "TODO", "chore", "update X", "remove Y" | `task` |
+ユーザーの入力から、最も可能性の高い種類を推定する。
+キーワードと種類の対応を次に示す。
 
-**Always confirm the type with the user before drafting**, regardless of confidence. Use a short prompt:
+| ユーザーの発言（例） | 種類 |
+| --- | --- |
+| 「壊れている」「動かない」「エラー」「broken」「crash」「doesn't work」 | `bug` |
+| 「追加してほしい」「ほしい」「want to add」「feature」「support for」 | `feature` |
+| 「改善したい」「もっと〜したい」「refactor」「improve」「better」 | `improvement` |
+| 「タスク」「やる」「TODO」「chore」「update X」「remove Y」 | `task` |
 
-> このIssueは「バグ報告 / 機能追加 / 改善提案 / タスク」のどれに該当するか確認したい。推測では「機能追加」だが、合っているか？
+推定の確信の強さにかかわらず、ドラフトを書く前に種類をユーザーに確認する。
+確認には次のような短い文を使う。
 
-If the user's input is in English, ask in English.
+> このIssueは「バグ報告・機能追加・改善提案・タスク」のどれに該当するか確認したい。推測では「機能追加」だが、合っているか。
 
-### Step 3: Check for project-local issue templates
+ユーザーの入力が英語の場合は、英語で質問する。
 
-Project templates take precedence over bundled defaults.
+各種類を使う場面と、境界が曖昧な場合の判定基準は、「Issueの種類」の節に示す。
 
-**GitHub**:
+### 3. Issueテンプレートを選ぶ
+
+プロジェクトのIssueテンプレートを、同梱のテンプレートより優先する。
+
+GitHubでは次のファイルを確認する。
+
 - `.github/ISSUE_TEMPLATE/*.md`
-- `.github/ISSUE_TEMPLATE/*.yml` (issue forms — read the structure but you will write Markdown body)
-- `.github/issue_template.md` (legacy single template)
+- `.github/ISSUE_TEMPLATE/*.yml`（Issue forms。構造を読み取り、本文はMarkdownで書く）
+- `.github/issue_template.md`（旧形式の単一テンプレート）
 
-**GitLab**:
+GitLabでは次のファイルを確認する。
+
 - `.gitlab/issue_templates/*.md`
 
-If multiple templates match the chosen type (e.g., `bug.md`, `bug_report.md`), prefer the one whose filename most closely matches the type name. If unsure which to pick, ask the user.
+選んだ種類に複数のテンプレート（`bug.md`・`bug_report.md`等）が該当する場合は、ファイル名が種類名に最も近いものを選ぶ。
+迷う場合は、ユーザーに確認する。
+プロジェクトのテンプレートが該当しない場合は、同梱の`references/templates/{type}.md`を使う。
 
-If no project template matches, use the bundled default in `references/templates/{type}.md`.
+選んだテンプレートは、ドラフトを書く前に全文を読む。
+記憶にある典型的なIssueテンプレートの構成でドラフトを書かない。
+見出しとその順序・テンプレートの「節の規則」に書かれた規則を抽出する。
+ドラフトの本文には、抽出した見出しをそのまま使う。
 
-**MUST: Read the chosen template file in full before drafting.** Do not draft from memory of "what a bug template typically looks like". Open and read the file. Extract the exact section headings, their ordering, and any rules described in the template's "Section Rules" portion. The drafted issue body MUST mirror those headings exactly.
+GitHubのIssue forms（`.yml`）は、フォームを解析してフィールドのラベルと順序を確定する。
+本文の各フィールドは、フォームの順序で`## <フィールドのラベル>`の見出しとして書く。
+必須のフィールドを省略しない。
 
-**MUST: For GitHub issue forms (`.yml`), parse the form to determine field labels and ordering.** Render the body as Markdown using `## <field label>` for each field, in the order defined by the form. Do not skip required fields.
+### 4. コードベースから読み取れる情報を抽出する
 
-### Step 4: Extract what the codebase can tell you
+ユーザーへ質問する前に、コードベースを読んで埋められる項目を埋める。
 
-Before asking the user any question, read the codebase to fill in what you can.
+コードから読み取りを試みる情報を次に示す。
 
-**You SHOULD attempt to read from code:**
-- File paths and function/class names mentioned by the user
-- Dependency versions (from `package.json`, `Cargo.toml`, `pyproject.toml`, `flake.nix`, etc.)
-- Build/runtime configuration
-- Where an error message originates (grep the literal string)
-- Existing similar issues (use `gh issue list --search` or `glab issue list --search`)
+- ユーザーが言及したファイルパスと関数・クラス名
+- 依存のバージョン（`package.json`・`Cargo.toml`・`pyproject.toml`・`flake.nix`等から取得する）
+- ビルド・実行時の設定
+- エラーメッセージの出力箇所（文字列をそのままgrepする）
+- 既存の類似Issue（`gh issue list --search`・`glab issue list --search`で検索する）
 
-**You MUST NOT assume from code:**
-- What the user actually saw or experienced
-- What the user expected to happen
-- What the user's environment was at the time
-- The business or personal motivation
-- Severity, priority, urgency
+コードから推測してはならない情報を次に示す。
 
-For the full checklist of what counts as implicit information, see [references/implicit-info-checklist.md](references/implicit-info-checklist.md).
+- ユーザーが実際に見た・経験した事象
+- ユーザーが期待した動作
+- 発生時点のユーザーの環境
+- 業務上・個人的な動機
+- 重大度・優先度・緊急度
 
-### Step 5: Identify gaps and ask the user
+暗黙の情報に該当する項目の一覧は、[references/implicit-info-checklist.md](references/implicit-info-checklist.md)を参照する。
 
-Walk through the chosen template section by section. For each field:
+### 5. 不足している情報をユーザーに質問する
 
-1. Can it be filled from code? → Fill it.
-2. Did the user already provide it? → Use what they provided verbatim.
-3. Otherwise → Add to the question list.
+選んだテンプレートの各項目を、次の順で処理する。
 
-**Ask all questions in a single round.** Do not pepper the user with one question at a time. Format:
+1. コードから埋められる場合は、埋める
+2. ユーザーが既に提供している場合は、提供された内容をそのまま使う
+3. どちらでもない場合は、質問の一覧に追加する
+
+質問は1回にまとめる。
+1問ずつ繰り返し質問しない。
+質問には次の形式を使う。
 
 > 以下の情報がIssue作成に必要だが、コードからは判断できない。回答してほしい。
 >
 > 1. 再現手順（具体的な操作を1ステップずつ）
-> 2. 実行時のOS / ブラウザ / バージョン
+> 2. 実行時のOS・ブラウザー・バージョン
 > 3. 期待していた動作
-> 4. 影響範囲（自分だけか / 他のユーザーにも影響するか）
+> 4. 影響範囲（自分だけか、他のユーザーにも影響するか）
 
-For bugs, the question list MUST include reproduction steps if the user has not already given them step-by-step. Never write "再現手順は省略" or "詳細は不明" in the issue body.
+バグ報告で、ユーザーが再現手順を1ステップずつ提供していない場合は、質問の一覧に再現手順を必ず含める。
+Issue本文に「再現手順は省略」「詳細は不明」と書かない。
 
-### Step 6: Draft the issue
+### 6. Issueのドラフトを書く
 
-Render the chosen template with all gathered information. Follow these rules:
+収集した情報で、選んだテンプレートを埋める。
+タイトル・本文は次の規則に従って書く。
 
-- **Title**: Concise, specific, under 72 characters. No prefixes like `[Bug]` if the platform supports labels or types.
-- **Body — template fidelity (strict)**:
-  - Use exactly the section headings defined by the template (same wording, same heading level, same order).
-  - Do not omit any section that the template defines, even if you have no content for it. If a section truly has no content and the template's own "Section Rules" allows omission, you may omit it; otherwise leave it with content gathered from the user.
-  - Do not invent new sections that the template does not define.
-  - Do not rename sections (e.g., do not change "Reproduction Steps" to "再現手順" unless the template uses Japanese headings).
-  - Before submitting the draft to the user for confirmation, perform a self-check: list the headings in your draft and compare them to the headings in the template file. If they do not match exactly (excluding sections legitimately omitted per the template's rules), regenerate the draft.
-- **Code blocks**: Wrap error messages, logs, commands, and code in fenced blocks with language hints.
-- **No fluff**: No phrases like "I think", "おそらく", "たぶん". State facts. If something is uncertain, mark it with `[要確認]` and surface it to the user, do not write it as if it were known.
-- **Sensitive data**: Replace tokens, credentials, internal hostnames, personal paths with placeholders like `[TOKEN]`, `[INTERNAL_HOST]`, `[USER_HOME]`.
-- **Language**: Match the repository's existing issue language. If unclear, match the user's input language.
+- タイトルは、具体的な内容を72文字未満で簡潔に書く。プラットフォームがラベル・種類に対応している場合は、`[Bug]`のような接頭辞を付けない
+- 本文はテンプレートに厳密に従う
+  - テンプレートが定める見出しをそのまま使う（同じ文言・同じ見出しレベル・同じ順序）
+  - 内容がない節も、テンプレートが定める節は省略しない。内容が本当になく、テンプレートの「節の規則」が省略を認める場合に限り省略してよい。それ以外の場合は、ユーザーから収集した内容で節を埋める
+  - テンプレートが定めていない節を追加しない
+  - 節を改名しない（例: テンプレートの見出しが「再現手順」なら、本文が英語でも「Reproduction Steps」に変えない）
+  - ドラフトをユーザーへ提示する前に、ドラフトの見出しを列挙してテンプレートの見出しと比較する。テンプレートの規則に従って省略した節を除いて一致しなければ、ドラフトを作り直す
+- エラーメッセージ・ログ・コマンド・コードは、言語ヒント付きのフェンスで囲む
+- 推量の表現（「おそらく」「たぶん」等）を書かない。事実を書く。不確実な事項は`[要確認]`を付けてユーザーへ提示し、確定した事項のように書かない
+- トークン・認証情報・内部ホスト名・個人パスは、`[TOKEN]`・`[INTERNAL_HOST]`・`[USER_HOME]`等のプレースホルダーに置換する
+- 本文の言語は、リポジトリで既存のIssueに使われている言語に合わせる。不明な場合は、ユーザーの入力言語に合わせる
 
-### Step 7: Check Japanese text with ja-writing
+### 7. 日本語の本文をja-writingで検査する
 
-If the issue body is written in Japanese, check it with the `ja-writing` skill before presenting the draft.
-The user then approves the checked text, and the flow after approval stays uninterrupted.
+本文が日本語の場合は、ドラフトを提示する前に`ja-writing`スキルで本文を検査する。
+承認の対象を検査後の本文にするため、承認後に本文は変わらない。
 
-1. Write the body to a Markdown file in the temporary directory that `ja-writing` specifies.
-   Use this file as the body file in Step 8.
-2. Follow `ja-writing` to run textlint and the AI review, and revise the body.
-3. If you did not apply a textlint warning or an AI review finding,
-   include the finding and your reason in the confirmation in Step 8.
+1. `ja-writing`が定める一時ファイルのディレクトリに、本文をMarkdownファイルとして書き出す。
+   このファイルを手順8の本文ファイルとして使う
+2. `ja-writing`の手順（textlintによる検査とAIレビュー）に従って、本文を修正する
+3. textlintの`warning`・AIレビューの指摘を反映しなかった場合は、その指摘と理由を手順8の確認に含める
 
-If the body is not in Japanese, skip this step.
+本文が日本語でない場合は、この手順を省略する。
 
-### Step 8: Confirm and create
+### 8. ユーザーの承認を得てIssueを作成する
 
-Present the draft to the user **exactly once**, including everything needed for them to decide:
+ドラフトは1回だけ提示する。
+提示するドラフトには、ユーザーの判断に必要な情報を全て含める。
 
 > 以下の内容でIssueを作成する。問題なければ「OK」と返答してほしい。修正が必要なら指摘してほしい。
 >
@@ -185,113 +186,120 @@ Present the draft to the user **exactly once**, including everything needed for 
 > ---
 > (本文)
 
-This single confirmation must contain the repository, the labels (if any), the title, and the full body. After this point, the user only sees the resulting URL or a fix request.
+この1回の確認には、リポジトリ・ラベル（ある場合）・タイトル・本文の全文を含める。
+この確認の後にユーザーが受け取る情報は、作成したIssueのURLか、修正依頼への対応だけである。
 
-**After explicit approval ("OK", "yes", 「はい」, 「OK」, etc.), proceed straight through to issue creation without any further questions or confirmations.** Specifically:
+明示的な承認（「OK」「はい」「yes」等）の後は、追加の質問・確認を挟まず次の処理を続けて実行する。
 
-1. Write the body to a temporary file (`/tmp/issue-body.md` or similar). If Step 7 wrote the body file, use that file.
-2. Run the create command.
-3. Report the URL.
+1. 本文を一時ファイル（`/tmp/issue-body.md`等）に書く。手順7で本文ファイルを書き出した場合は、そのファイルを使う
+2. 作成コマンドを実行する
+3. 作成したIssueのURLをユーザーに報告する
 
-Do all three in one continuous flow. Do not ask "ラベルはこれでいいか？" or "本当に作成するか？" after approval — those should have been included in the single confirmation in step 8.
+承認後に「ラベルはこれでいいか」「本当に作成するか」と質問しない。
+これらの確認事項は、手順8の1回の確認に含めておく。
 
-If the user requests fixes instead of approving, apply the fixes and check the revised Japanese body again as in Step 7.
-Then re-present the draft (back to single-confirmation format).
+GitHubでは次のコマンドを使う。
 
-**GitHub**:
 ```bash
 gh issue create \
   --repo OWNER/REPO \
   --title "TITLE" \
   --body-file /tmp/issue-body.md \
-  --label "bug"   # if applicable
+  --label "bug"   # 該当する場合
 ```
 
-**GitLab**:
+GitLabでは次のコマンドを使う。
+
 ```bash
 glab issue create \
   --repo OWNER/REPO \
   --title "TITLE" \
   --description-file /tmp/issue-body.md \
-  --label "bug"   # if applicable
+  --label "bug"   # 該当する場合
 ```
 
-Use `--body-file` / `--description-file` (not inline `--body`) to preserve formatting and avoid shell escaping issues. Write the body to a temporary file first.
+本文は、インラインの`--body`ではなく、`--body-file`・`--description-file`でファイルから渡す。
+本文の改行・記号が、シェルのエスケープで崩れる問題を避けるためである。
 
-Report the resulting URL to the user as the final message.
+ユーザーが修正を依頼した場合は、修正を反映し、日本語の本文を手順7と同じ方法で再び検査する。
+その後、再び1回の確認の形式でドラフトを提示する。
 
-## Issue Type Selection
+## Issueの種類
 
-| Type | When to use | Template |
-|---|---|---|
-| `bug` | Existing functionality is broken, produces wrong output, crashes, or behaves unexpectedly | [references/templates/bug.md](references/templates/bug.md) |
-| `feature` | A new capability that does not exist yet | [references/templates/feature.md](references/templates/feature.md) |
-| `improvement` | Existing functionality works but should be enhanced (performance, UX, code quality) | [references/templates/improvement.md](references/templates/improvement.md) |
-| `task` | Concrete unit of work that is not user-facing (refactor, dependency update, cleanup, docs) | [references/templates/task.md](references/templates/task.md) |
+| 種類 | 使う場面 | テンプレート |
+| --- | --- | --- |
+| `bug` | 既存の機能が壊れている・誤った出力を返す・クラッシュする・想定外の挙動をする | [references/templates/bug.md](references/templates/bug.md) |
+| `feature` | まだ存在しない新しい機能 | [references/templates/feature.md](references/templates/feature.md) |
+| `improvement` | 既存の機能は動くが、強化すべき（性能・UX・コード品質） | [references/templates/improvement.md](references/templates/improvement.md) |
+| `task` | ユーザーに直接見えない具体的な作業（リファクタリング・依存の更新・整理・ドキュメント） | [references/templates/task.md](references/templates/task.md) |
 
-When the boundary is fuzzy:
-- Bug vs Improvement → If current behavior is "documented or obviously intended" but suboptimal → improvement. If current behavior is "clearly wrong or unintended" → bug.
-- Feature vs Improvement → If the capability does not exist at all → feature. If it exists but should be better → improvement.
-- Improvement vs Task → If the change is user-visible → improvement. If it is internal-only → task.
+境界が曖昧な場合は、次の基準で判定する。
 
-When in doubt, present the choice to the user.
+- バグか改善かは、現在の挙動で判定する。現在の挙動が文書化された・明らかに意図されたもので、最適でないだけなら改善とする。現在の挙動が明らかに誤り・意図しないものならバグとする
+- 機能追加か改善かは、機能の有無で判定する。機能がまったく存在しなければ機能追加とする。存在するが改善すべきなら改善とする
+- 改善かタスクかは、ユーザーから見えるかで判定する。ユーザーから見える変更なら改善とする。内部のみの変更ならタスクとする
 
-## Anti-patterns
+判断に迷う場合は、選択肢をユーザーに提示する。
 
-Things this skill must NOT do:
+## 禁止事項
 
-- ❌ Write "再現手順は不明" or "TBD" or "後で追記" in a bug report
-- ❌ Guess the user's environment from `uname` or git config
-- ❌ Combine multiple bugs into one issue
-- ❌ Skip the user confirmation step
-- ❌ Create the issue before getting user approval on the draft
-- ❌ Invent "Expected Behavior" by reading the spec — the user's expectation may differ from the spec
-- ❌ Mark issues with severity/priority labels without asking the user
-- ❌ Add `gh` / `glab` flags the user did not request (assignee, milestone, project)
-- ❌ Draft the body without reading the chosen template file first
-- ❌ Present a Japanese draft to the user without checking it with `ja-writing`
-- ❌ Use section headings that differ from the template (different wording, different order, extra sections, missing sections)
-- ❌ Pause after user approval to ask additional questions before running `gh`/`glab issue create`
-- ❌ Split the confirmation into multiple turns ("ラベルはこれでいいか？" → wait → "本当に作成するか？" → wait → create)
+このスキルで禁止する操作を次に示す。
 
-## Examples
+- バグ報告に「再現手順は不明」「TBD」「後で追記」と書く
+- `uname`やgitの設定からユーザーの環境を推測する
+- 複数のバグを1つのIssueにまとめる
+- ユーザーへの確認の手順を省略する
+- ドラフトの承認を得る前にIssueを作成する
+- 仕様を読んで「期待する動作」を創作する（ユーザーの期待は仕様と異なる場合がある）
+- ユーザーへ質問せずに重大度・優先度のラベルを付ける
+- ユーザーが依頼していない`gh`・`glab`のオプション（担当者・マイルストーン・プロジェクト）を追加する
+- 選んだテンプレートのファイルを読まずに本文を書く
+- 日本語のドラフトを`ja-writing`で検査せずにユーザーへ提示する
+- テンプレートと異なる見出し（文言の違い・順序の違い・余分な節・欠けた節）を使う
+- ユーザーの承認後、`gh`・`glab`の`issue create`を実行する前に追加の質問で止まる
+- 確認を複数のターンに分割する（ラベルの確認 → 待機 → 作成の意思の確認 → 待機 → 作成）
+- 外部ツールを自分でインストールする
 
-### Example 1: Bug from informal description
+## 例
 
-**User input**:
+### 例1: 曖昧な説明からのバグ報告
+
+ユーザーの入力を次に示す。
+
 > ログイン後にダッシュボードが表示されないことがある
 
-**Skill response**:
+スキルの対応を次に示す。
 
-1. Read `git remote -v` → GitHub repo `acme/web`.
-2. Confirm: "これはバグ報告でよいか？" → User: "はい"
-3. Check `.github/ISSUE_TEMPLATE/` → no bug template found, use bundled `bug.md`. **Read the file in full** to get the exact section headings.
-4. Grep "dashboard" in code, find `src/pages/Dashboard.tsx` and related router config.
-5. Ask the user (single round):
+1. `git remote get-url origin`を実行する → GitHubの`acme/web`
+2. 「これはバグ報告でよいか」と確認する → ユーザーの回答は「はい」
+3. `.github/ISSUE_TEMPLATE/`を確認する → バグ報告のテンプレートがないため、同梱の`bug.md`を使う。正確な見出しを得るため、ファイルの全文を読む
+4. コードで「dashboard」をgrepし、`src/pages/Dashboard.tsx`と関連するルーターの設定を見つける
+5. ユーザーに1回で質問する
    > 以下を回答してほしい。
-   > 1. 再現手順（ログイン直後か / 特定の操作後か / どのアカウントで起きるか）
-   > 2. 「表示されない」とは具体的にどう見えるか（白画面 / エラー画面 / 旧画面のまま等）
-   > 3. ブラウザのコンソールにエラーは出ているか
-   > 4. OS / ブラウザ / バージョン
+   > 1. 再現手順（ログイン直後か・特定の操作後か・どのアカウントで起きるか）
+   > 2. 「表示されない」とは具体的にどう見えるか（白画面・エラー画面・旧画面のまま等）
+   > 3. ブラウザーのコンソールにエラーは出ているか
+   > 4. OS・ブラウザー・バージョン
    > 5. 毎回起きるか、たまに起きるか
-6. Draft using user answers, mirroring `bug.md` headings exactly. Verify headings match the template. Check the Japanese body with `ja-writing`. Show draft for confirmation, including repo, labels, title, and full body in one message.
-7. After "OK" → write body to `/tmp/issue-body.md` → `gh issue create` → report URL. All in one continuous flow without re-confirming.
+6. ユーザーの回答を使い、`bug.md`の見出しをそのまま反映したドラフトを書く。見出しがテンプレートと一致することを確認する。日本語の本文を`ja-writing`で検査する。リポジトリ・ラベル・タイトル・本文の全文を1つのメッセージで提示して確認を得る
+7. 「OK」の後に、本文を`/tmp/issue-body.md`に書く → `gh issue create`を実行する → URLを報告する。この3つの処理は、再確認を挟まず続けて実行する
 
-### Example 2: Feature request with code context
+### 例2: コードの文脈を伴う機能追加の依頼
 
-**User input**:
+ユーザーの入力を次に示す。
+
 > 設定画面にダークモード切り替えを追加したい
 
-**Skill response**:
+スキルの対応を次に示す。
 
-1. Detect GitHub.
-2. Confirm: "機能追加のIssueでよいか？" → "はい"
-3. No project template → use bundled `feature.md`. Read it in full.
-4. Read `src/pages/Settings.tsx` to confirm current settings structure. Read `tailwind.config.js` for theming setup.
-5. Ask:
+1. GitHubと判定する
+2. 「機能追加のIssueでよいか」と確認する。ユーザーの回答は「はい」
+3. プロジェクトのテンプレートがないため、同梱の`feature.md`を使う。全文を読む
+4. `src/pages/Settings.tsx`を読み、現在の設定画面の構造を確認する。`tailwind.config.js`を読み、テーマの設定を確認する
+5. ユーザーに質問する
    > 以下を回答してほしい。
-   > 1. ダークモードを追加する動機（個人的な好み / アクセシビリティ / ユーザー要望 など）
+   > 1. ダークモードを追加する動機（個人的な好み・アクセシビリティ・ユーザー要望等）
    > 2. システム設定に追従するべきか、手動切り替えのみか、両方か
    > 3. 優先度
-6. Draft mirroring `feature.md` headings exactly. Show draft (repo + labels + title + body) for single confirmation.
-7. After "OK" → create issue → report URL, without further questions.
+6. `feature.md`の見出しをそのまま反映したドラフトを書く。リポジトリ・ラベル・タイトル・本文を提示し、1回で確認を得る
+7. 「OK」の後に、追加の質問を挟まずIssueを作成し、URLを報告する

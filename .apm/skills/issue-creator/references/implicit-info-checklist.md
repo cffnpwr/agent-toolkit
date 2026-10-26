@@ -1,106 +1,113 @@
-# Implicit Information Checklist
+# 暗黙の情報のチェックリスト
 
-Definition: **implicit information** is anything that is not derivable from the codebase (source files, configuration, dependency manifests, build scripts, version control history). Implicit information must be obtained from the user, never invented.
+暗黙の情報とは、コードベース（ソースファイル・設定・依存のマニフェスト・ビルドスクリプト・バージョン管理の履歴）から導けない情報である。
+暗黙の情報はユーザーから得る。
+捏造しない。
 
-This checklist helps decide for each piece of information whether it can be read from code or must be asked.
+このチェックリストは、各情報をコードから読み取れるか、ユーザーに質問すべきかを判定するために使う。
 
-## Decision Rule
+## 判定の規則
 
-For every field in an issue template:
+Issueテンプレートの各項目を、次の規則で判定する。
 
 ```
-Can this be obtained by reading source files, config, deps, or git log?
-  YES → Read the code, do not ask the user
-  NO  → Ask the user, do not guess
+ソースファイル・設定・依存・git logを読んで得られるか
+  YES → コードを読む。ユーザーに質問しない
+  NO  → ユーザーに質問する。推測しない
 ```
 
-## Fields That Code CAN Tell You
+## コードから分かる項目
 
-These should be filled by reading the repository, not asked:
+次の項目はリポジトリを読んで埋める。
+ユーザーに質問しない。
 
-| Field | How to derive |
-|---|---|
-| File paths involved | Grep / read the files mentioned by the user |
-| Function or class names | Read the file the user pointed to |
-| Dependency versions | `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, `flake.nix`, `flake.lock` |
-| Language / runtime version | Same files as above, or `.tool-versions`, `.nvmrc`, `mise.toml` |
-| Build commands | `package.json` scripts, `Makefile`, `justfile`, `flake.nix` apps |
-| CI configuration | `.github/workflows/*`, `.gitlab-ci.yml` |
-| Where an error message text comes from | Grep the literal string |
-| Existing related issues | `gh issue list --search` / `glab issue list --search` |
-| Recent changes to a file | `git log -p <file>` |
-| Public API surface of a module | Read the module's exports |
-| Default config values | Read the config defaults file |
+| 項目 | 導き方 |
+| --- | --- |
+| 関係するファイルパス | ユーザーが言及したファイルをgrepする・読む |
+| 関数名・クラス名 | ユーザーが示したファイルを読む |
+| 依存のバージョン | `package.json`・`Cargo.toml`・`pyproject.toml`・`go.mod`・`flake.nix`・`flake.lock` |
+| 言語・ランタイムのバージョン | 上記と同じファイル、または`.tool-versions`・`.nvmrc`・`mise.toml` |
+| ビルドコマンド | `package.json`のscripts・`Makefile`・`justfile`・`flake.nix`のapps |
+| CIの設定 | `.github/workflows/*`・`.gitlab-ci.yml` |
+| エラーメッセージの出力箇所 | 文字列をそのままgrepする |
+| 既存の関連Issue | `gh issue list --search`・`glab issue list --search` |
+| ファイルの最近の変更 | `git log -p <file>` |
+| モジュールの公開API | モジュールのexportを読む |
+| 設定のデフォルト値 | 設定のデフォルト値を定義するファイルを読む |
 
-If the user mentions a symbol or path you have not yet read, **read it before asking the user**. Do not ask "where is the login function?" if grep can find it.
+ユーザーがまだ読んでいないシンボル・パスに言及した場合は、ユーザーへ質問する前にそのシンボル・パスを読む。
+grepで見つかる情報（ログイン処理の関数の場所等）をユーザーに質問しない。
 
-## Fields That Code CANNOT Tell You
+## コードから分からない項目
 
-These MUST be asked. Never write a guess into the issue body.
+次の項目は必ずユーザーに質問する。
+推測をIssue本文に書かない。
 
-### For all issue types
+### 全種類のIssueに共通の項目
 
-| Field | Why code cannot tell you |
-|---|---|
-| Motivation / why this matters | Business or personal context, not in code |
-| Priority / urgency | Reflects external constraints |
-| Severity / business impact | Depends on user base, SLA, deadlines |
-| Affected users (self only / team / all users) | Not encoded |
-| Workaround availability | User experience knowledge |
-| Deadline | External |
+| 項目 | コードから分からない理由 |
+| --- | --- |
+| 動機・重要である理由 | 業務上・個人的な文脈であり、コードに含まれない |
+| 優先度・緊急度 | 外部の制約を反映する |
+| 重大度・業務への影響 | ユーザー数・SLA・期限に依存する |
+| 影響を受けるユーザー（自分のみ・チーム・全ユーザー） | コードに記録されていない |
+| 回避策の有無 | ユーザーの経験に基づく知識である |
+| 期限 | 外部で決まる |
 
-### For bugs specifically (MANDATORY — do not skip)
+### バグ報告に固有の項目（必須のため省略しない）
 
-| Field | Why mandatory |
-|---|---|
-| **Reproduction steps** | Code shows what the function does, not what the user did to trigger it. Step-by-step, do NOT abbreviate. |
-| **Expected behavior** | The user's expectation may differ from what the spec says. Ask the user, do not infer from spec. |
-| **Actual behavior** | What the user actually saw — error message, blank screen, wrong value, crash. Be specific. |
-| **Frequency** | Always / sometimes / once |
-| **Environment at time of bug** | OS, browser, app version, locale, network condition. Code cannot tell you what the user was running. |
-| **First time observed** | New regression vs longstanding bug |
-| **Recent changes by user** | Did the user upgrade, change config, switch network? |
+| 項目 | 必須である理由 |
+| --- | --- |
+| 再現手順 | コードが示すのは関数の処理内容であり、ユーザーが問題を発生させた操作ではない。1ステップずつ書き、省略しない |
+| 期待する動作 | ユーザーの期待は仕様と異なる場合がある。仕様から推測せず、ユーザーに質問する |
+| 実際の動作 | ユーザーが実際に見た事象（エラーメッセージ・白画面・誤った値・クラッシュ）を具体的に書く |
+| 発生頻度 | 毎回・たまに・1回だけ |
+| 発生時の環境 | OS・ブラウザー・アプリケーションのバージョン・ロケール・ネットワークの状態。ユーザーが実行していた環境はコードから分からない |
+| 最初に観測した時期 | 新しく発生したリグレッションか、以前からあるバグかを区別する |
+| ユーザーが最近行なった変更 | アップグレード・設定の変更・ネットワークの切り替えの有無 |
 
-If the user did not provide reproduction steps, **stop and ask**. Do not write the issue with reproduction steps marked as "TBD" or "省略".
+ユーザーが再現手順を提供していない場合は、作業を止めて質問する。
+再現手順を「TBD」「省略」としたIssueを書かない。
 
-### For features specifically
+### 機能追加に固有の項目
 
-| Field | Why mandatory |
-|---|---|
-| Use case / who benefits | Not in code |
-| Acceptance criteria | What "done" looks like from the user's view |
-| Alternatives the user considered | Why this approach over others |
+| 項目 | 必須である理由 |
+| --- | --- |
+| ユースケース・恩恵を受ける人 | コードに含まれない |
+| 受け入れ条件 | ユーザーから見た「完了」の状態を定める |
+| ユーザーが検討した代替案 | 他の方法よりこの方法を選んだ理由を示す |
 
-### For improvements specifically
+### 改善提案に固有の項目
 
-| Field | Why mandatory |
-|---|---|
-| What is unsatisfactory about current behavior | "It works but..." — the "but" is the user's experience |
-| Desired outcome (qualitative) | What success looks like |
-| Measurable target if any | e.g., "load time under 2 seconds" |
+| 項目 | 必須である理由 |
+| --- | --- |
+| 現在の動作の不十分な点 | 「動くが…」の「が」以降は、ユーザーの経験である |
+| 望ましい結果（定性的） | 成功の状態を定める |
+| 定量的な目標（あれば） | 例: 「ロード時間を2秒未満にする」 |
 
-### For tasks specifically
+### タスクに固有の項目
 
-| Field | Why mandatory |
-|---|---|
-| Why now | Tasks are often not urgent, so the trigger matters |
-| Definition of done | What state the codebase should be in afterward |
+| 項目 | 必須である理由 |
+| --- | --- |
+| 今やる理由 | タスクは緊急でない場合が多く、着手の契機が重要になる |
+| 完了の定義 | 作業後にコードベースがどの状態になるべきかを定める |
 
-## Common Mistakes to Avoid
+## 避けるべき誤り
 
-- **Inferring expected behavior from the spec.** The spec describes intent, the bug report describes the gap between intent and what the user saw. Ask the user what they expected — they may have misunderstood the spec, which is itself useful information.
-- **Filling in environment from your own context.** Your `uname` is not the user's environment. Ask.
-- **Writing "see code" instead of describing the actual reproduction.** A reader of the issue should not need to read the code to reproduce the bug.
-- **Combining multiple symptoms into one issue.** If the user describes two distinct problems, ask which to file first, or whether to file separately.
-- **Marking severity yourself.** Severity is the user's call, not yours.
+- 仕様から期待する動作を推測する。仕様は意図を記述する。バグ報告は、意図とユーザーが見た事象の差を記述する。ユーザーが何を期待したかを質問する。ユーザーが仕様を誤解している場合も、その誤解自体が有用な情報になる
+- 自分の環境から環境の情報を埋める。自分の`uname`の結果はユーザーの環境ではない。ユーザーに質問する
+- 実際の再現手順を書かずに「コードを参照」と書く。Issueの読み手が、コードを読まずにバグを再現できるようにする
+- 複数の症状を1つのIssueにまとめる。ユーザーが2つの異なる問題を説明した場合は、どちらを先に登録するか、別々に登録するかを質問する
+- 重大度を自分で決める。重大度はユーザーが決める
 
-## When the User Refuses to Provide Information
+## ユーザーが情報を提供しない場合
 
-If the user explicitly says "I don't know" or "skip that":
+ユーザーが「分からない」「それは省略して」と明示した場合は、次のように対応する。
 
-- For **non-mandatory** fields → omit the section entirely (do not write "不明" — just leave it out)
-- For **mandatory bug fields** (reproduction steps, expected, actual) → push back once:
+- 必須でない項目は、節ごと省略する（「不明」と書かず、節を書かない）
+- バグ報告の必須項目（再現手順・期待する動作・実際の動作）は、1回だけ再度依頼する
 
   > 再現手順なしのバグ報告は対応が困難になる。覚えている範囲でよいので、最後に行った操作を順に教えてほしい。「ログインボタンを押したら画面が固まった」程度でも構わない。
 
-  If the user still refuses, write the issue with a clearly marked `[要確認: 再現手順]` placeholder section AND surface this to the user explicitly so they know the issue is incomplete.
+  ユーザーが再度の依頼後も提供しない場合は、`[要確認: 再現手順]`のプレースホルダーを明示した節を置いてIssueを書く。
+  さらに、Issueが不完全であることをユーザーに明示する。

@@ -1,6 +1,6 @@
 # プラットフォーム検出とCLIの差異
 
-PR（Merge Request）作成における GitHub / GitLab の検出方法と、CLIの差異をまとめる。
+PR（Merge Request）作成におけるGitHub/GitLabの検出方法と、CLIの差異をまとめる。
 
 ## 検出
 
@@ -14,7 +14,8 @@ git remote get-url origin
 | `gitlab.`（任意のホスト、self-hosted含む） | GitLab | `glab` |
 | 上記以外 | 不明 | ユーザーに確認 |
 
-複数リモートがある場合は `origin` を基準とする。`origin` が無ければユーザーに確認する。
+複数リモートがある場合は`origin`を基準とする。
+`origin`が無ければユーザーに確認する。
 
 ## 用語の対応
 
@@ -23,11 +24,12 @@ git remote get-url origin
 | 変更提案 | Pull Request (PR) | Merge Request (MR) |
 | マージ先 | base branch | target branch |
 | マージ元 | head branch | source branch |
-| テンプレート配置 | `.github/PULL_REQUEST_TEMPLATE.md` 等 | `.gitlab/merge_request_templates/*.md` |
+| テンプレート配置 | `.github/PULL_REQUEST_TEMPLATE.md`等 | `.gitlab/merge_request_templates/*.md` |
 
 ## 作成コマンドの差異
 
-**GitHub（gh）:**
+GitHub（gh）では次のコマンドを使う。
+
 ```bash
 gh pr create \
   --base <target> \
@@ -37,7 +39,8 @@ gh pr create \
   --label "<label>"
 ```
 
-**GitLab（glab）:**
+GitLab（glab）では次のコマンドを使う。
+
 ```bash
 glab mr create \
   --target-branch <target> \
@@ -47,6 +50,6 @@ glab mr create \
   --label "<label>"
 ```
 
-- GitHubは `--body-file` でファイルから本文を読める。GitLabの `glab mr create` は `--description` に文字列を渡すため、ファイル内容を展開する。
-- ドラフトPR/MRにする場合: GitHubは `--draft`、GitLabは `--draft`。
-- 既存ブランチのpush状況により、作成前にpushが必要な場合がある（`gh`/`glab` が促す）。
+- GitHubは`--body-file`でファイルから本文を読める。GitLabの`glab mr create`は`--description`で本文を文字列として受け取るため、コマンド置換でファイルの内容を渡す
+- ドラフトPR/MRにする場合: GitHubは`--draft`、GitLabは`--draft`
+- headのブランチをpushしていない場合は、作成の前にpushが必要になる場合がある（`gh`・`glab`がpushを求めるメッセージを表示する）
