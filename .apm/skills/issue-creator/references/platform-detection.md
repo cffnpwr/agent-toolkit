@@ -1,45 +1,49 @@
-# Platform Detection and CLI Reference
+# プラットフォームの検出とCLIのリファレンス
 
-How to detect GitHub vs GitLab from the repository, and how to use each platform's CLI to create issues.
+リポジトリからGitHub・GitLabを判定する方法と、各プラットフォームのCLIでIssueを作成する方法をまとめる。
 
-## Detecting Platform
+## プラットフォームの検出
 
 ```bash
 git remote get-url origin
 ```
 
-Match the URL against these patterns:
+URLを次のパターンと照合する。
 
-| URL pattern | Platform |
-|---|---|
+| URLのパターン | プラットフォーム |
+| --- | --- |
 | `github.com` | GitHub |
 | `gitlab.com` | GitLab.com |
-| `gitlab.<company>.<tld>` | Self-hosted GitLab |
-| `git@github.com:...` | GitHub (SSH) |
-| `git@gitlab.<host>:...` | GitLab (SSH) |
+| `gitlab.<company>.<tld>` | セルフホストのGitLab |
+| `git@github.com:...` | GitHub（SSH） |
+| `git@gitlab.<host>:...` | GitLab（SSH） |
 
-If the remote does not match, ask the user which platform.
+リモートがどのパターンにも一致しない場合は、ユーザーにプラットフォームを確認する。
 
-If the repository has multiple remotes (e.g., `origin` and `upstream`), prefer `origin`. If the user explicitly mentions another remote, use that.
+リポジトリに複数のリモート（`origin`・`upstream`等）がある場合は、`origin`を優先する。
+ユーザーが別のリモートを明示した場合は、そのリモートを使う。
 
-## Extracting OWNER/REPO
+## OWNER/REPOの取得
 
-For GitHub:
+GitHubでは次のコマンドを使う。
+
 ```bash
 gh repo view --json nameWithOwner --jq .nameWithOwner
 ```
 
-For GitLab:
+GitLabでは次のコマンドを使う。
+
 ```bash
 glab repo view --output json | jq -r .path_with_namespace
 ```
 
-If the CLI is not authenticated, fall back to parsing `git remote get-url origin` manually:
+CLIが認証されていない場合は、`git remote get-url origin`の結果を手作業で解析する。
+
 - `https://github.com/owner/repo.git` → `owner/repo`
 - `git@github.com:owner/repo.git` → `owner/repo`
-- `https://gitlab.example.com/group/subgroup/repo.git` → `group/subgroup/repo` (GitLab supports nested groups)
+- `https://gitlab.example.com/group/subgroup/repo.git` → `group/subgroup/repo`（GitLabはグループの入れ子に対応する）
 
-## Checking for Project Templates
+## プロジェクトのテンプレートの確認
 
 ### GitHub
 
@@ -48,14 +52,16 @@ ls .github/ISSUE_TEMPLATE/ 2>/dev/null
 ls .github/issue_template.md 2>/dev/null
 ```
 
-GitHub supports two template formats:
-- **Markdown** (`.md`): Plain Markdown body shown when user clicks "New issue" with that template
-- **Issue forms** (`.yml`): Structured form with typed fields
+GitHubは2種類のテンプレート形式に対応する。
 
-When a `.yml` issue form exists for the chosen type:
-- Read it to understand the expected fields
-- Render the body as Markdown matching those fields (since `gh issue create --body-file` writes Markdown, not form data)
-- Section headers in Markdown should mirror the form's field labels
+- Markdown（`.md`）は、ユーザーがそのテンプレートで「New issue」を押したときに表示されるMarkdownの本文である
+- Issue forms（`.yml`）は、型付きのフィールドを持つ構造化されたフォームである
+
+選んだ種類に対応する`.yml`のIssue formsがある場合は、次のように扱う。
+
+- フォームを読み、必要なフィールドを把握する
+- フィールドに対応するMarkdownの本文を書く（`gh issue create --body-file`が書き込むのはフォームのデータではなくMarkdownであるため）
+- Markdownの見出しは、フォームのフィールドのラベルと一致させる
 
 ### GitLab
 
@@ -63,17 +69,18 @@ When a `.yml` issue form exists for the chosen type:
 ls .gitlab/issue_templates/ 2>/dev/null
 ```
 
-GitLab only supports Markdown templates. Filename without `.md` becomes the template name.
+GitLabが対応するテンプレートはMarkdownのみである。
+ファイル名から`.md`を除いた文字列がテンプレート名になる。
 
-## Creating Issues
+## Issueの作成
 
 ### GitHub
 
-Always write the body to a file first to avoid shell-escaping issues:
+シェルエスケープの問題を避けるため、本文を必ず先にファイルへ書き出す。
 
 ```bash
 cat > /tmp/issue-body.md <<'EOF'
-## Description
+## 概要
 ...
 EOF
 
@@ -83,13 +90,15 @@ gh issue create \
   --body-file /tmp/issue-body.md
 ```
 
-Optional flags (only add if the user explicitly requested):
-- `--label LABEL` (repeat for multiple)
-- `--assignee USERNAME` (or `@me`)
+ユーザーが明示的に依頼した場合のみ、次のオプションを追加する。
+
+- `--label LABEL`（複数指定する場合は繰り返す）
+- `--assignee USERNAME`（または`@me`）
 - `--milestone NUMBER`
 - `--project PROJECT`
 
-To set issue type (Bug/Feature/Task — org-level metadata, not labels), `gh issue create` does NOT support `--type`. Use `gh api` instead:
+Issueの種類（Bug・Feature・Task）は、ラベルではなくOrganizationレベルのメタデータである。
+`gh issue create`は`--type`に対応していないため、Issueの種類を設定する場合は`gh api`を使う。
 
 ```bash
 gh api repos/OWNER/REPO/issues \
@@ -104,7 +113,7 @@ gh api repos/OWNER/REPO/issues \
 
 ```bash
 cat > /tmp/issue-body.md <<'EOF'
-## Description
+## 概要
 ...
 EOF
 
@@ -114,17 +123,19 @@ glab issue create \
   --description-file /tmp/issue-body.md
 ```
 
-Optional flags:
-- `--label LABEL` (comma-separated for multiple: `--label "bug,priority/high"`)
+追加できるオプションを次に示す。
+
+- `--label LABEL`（複数指定する場合はカンマ区切り: `--label "bug,priority/high"`）
 - `--assignee USERNAME`
 - `--milestone TITLE`
-- `--confidential` (for security issues — only if user requested)
+- `--confidential`（セキュリティのIssue用。ユーザーが依頼した場合のみ）
 
-GitLab does not have an "issue type" concept distinct from labels. Use labels for categorization.
+GitLabには、ラベルと区別された「Issueの種類」の概念が無い。
+分類にはラベルを使う。
 
-## Searching Existing Issues
+## 既存のIssueの検索
 
-Always check for duplicates before creating.
+作成する前に、必ず重複を確認する。
 
 ### GitHub
 
@@ -132,7 +143,7 @@ Always check for duplicates before creating.
 gh issue list --repo OWNER/REPO --search "KEYWORDS" --state all --limit 10
 ```
 
-For full-text search across closed issues use `--state all`.
+クローズ済みのIssueも含めて全文を検索する場合は、`--state all`を使う。
 
 ### GitLab
 
@@ -140,16 +151,18 @@ For full-text search across closed issues use `--state all`.
 glab issue list --repo OWNER/REPO --search "KEYWORDS" --all --per-page 10
 ```
 
-If duplicates are found, present them to the user and ask whether to:
-1. Add a comment to the existing issue
-2. Create a new issue anyway (and link to the existing one)
-3. Cancel
+重複が見つかった場合は、ユーザーに提示し、次のどれを選ぶか質問する。
 
-## Authentication Failures
+1. 既存のIssueにコメントを追加する
+2. それでも新しいIssueを作成する（既存のIssueへリンクする）
+3. 作成を中止する
 
-If `gh` or `glab` returns an authentication error:
+## 認証の失敗
+
+`gh`・`glab`が認証エラーを返した場合は、次のコマンドでの認証をユーザーに依頼する。
 
 - `gh auth login`
 - `glab auth login`
 
-Do not try to use a token from environment variables silently — the user should be aware.
+環境変数のトークンを、ユーザーへ伝えずに使わない。
+トークンを使う場合は、ユーザーがそのことを把握している必要がある。
