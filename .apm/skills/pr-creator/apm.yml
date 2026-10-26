@@ -1,0 +1,11 @@
+name: pr-creator
+version: 1.0.0
+description: GitHub・GitLabのPull Requestを一貫した形式・差分重視で作成する
+author: cffnpwr
+license: MIT
+type: skill
+
+dependencies:
+  apm:
+    - git: parent
+      path: .apm/skills/ja-writing

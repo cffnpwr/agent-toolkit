@@ -1,0 +1,11 @@
+name: issue-creator
+version: 1.0.0
+description: GitHub・GitLabのIssueを一貫した形式で作成する
+author: cffnpwr
+license: MIT
+type: skill
+
+dependencies:
+  apm:
+    - git: parent
+      path: .apm/skills/ja-writing

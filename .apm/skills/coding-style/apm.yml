@@ -1,0 +1,11 @@
+name: coding-style
+version: 1.0.0
+description: コーディングスタイルの規約
+author: cffnpwr
+license: MIT
+type: skill
+
+dependencies:
+  apm:
+    - git: parent
+      path: .apm/skills/ja-writing

@@ -3,6 +3,7 @@ name: pr-creator
 description: GitHub/GitLabのPull Request（Merge Request）を一貫した形式・差分重視で作成する。ユーザーが「PRを作って」「プルリクを出して」「MRを作成して」「PR出して」のように作成を明示的に依頼した時に起動する。git remoteからプラットフォーム（GitHub/GitLab）を検出し、プロジェクトのPRテンプレートがあれば優先、無ければ同梱デフォルトを使う。コミット差分から「何を変更し（What）・なぜ変更し（Why）・どんな影響が出るか（Impact）」を組み立て、途中経路（試行錯誤・デバッグ過程）は書かない。差分から読めない動機・背景はユーザーに確認し、推測で埋めない。作成前に必ずドラフトを提示して承認を得る。
 compatibility: |
   Required: gh CLI (GitHub), glab CLI (GitLab), git
+  Requires ja-writing skill.
   No language runtime required. All logic is in the SKILL itself; no scripts.
 ---
 
@@ -31,6 +32,12 @@ command -v gh  >/dev/null 2>&1 || { echo "gh not found." >&2; exit 1; }
 # GitLabなら
 command -v glab >/dev/null 2>&1 || { echo "glab not found." >&2; exit 1; }
 ```
+
+### スキル
+
+| スキル | 用途 |
+| --- | --- |
+| ja-writing | 本文が日本語の場合に、ドラフトをユーザーへ提示する前に本文を検査する |
 
 ## 中核原則
 
@@ -121,7 +128,19 @@ git diff main...HEAD
 - **機密情報**: トークン・認証情報・内部ホスト名・個人パスは `[TOKEN]` `[INTERNAL_HOST]` 等のプレースホルダに置換する。
 - **言語**: リポジトリの既存PR/Issueの言語に合わせる。不明ならユーザーの入力言語に合わせる。
 
-### Step 7: 確認と作成
+### Step 7: ja-writingによる日本語の検査
+
+本文が日本語の場合は、ドラフトを提示する前に`ja-writing`スキルで本文を検査する。
+承認の対象を検査後の本文にするため、承認後に本文は変わらない。
+
+1. `ja-writing`が定める一時ファイルのディレクトリに、本文をMarkdownファイルとして書き出す。
+   このファイルをStep 8の本文ファイルとして使う
+2. `ja-writing`の手順（textlintによる検査とAIレビュー）に従って、本文を修正する
+3. textlintの`warning`・AIレビューの指摘を反映しなかった場合は、その指摘と理由をStep 8の確認に含める
+
+本文が日本語でない場合は、このStepを省略する。
+
+### Step 8: 確認と作成
 
 ドラフトを**1回だけ**提示し、ユーザーが判断に必要な情報を全て含める。
 
@@ -136,7 +155,7 @@ git diff main...HEAD
 
 承認（「OK」「はい」等）後は、追加の質問・確認を挟まず以下を一連で実行する。
 
-1. 本文を一時ファイル（`/tmp/pr-body.md` 等）に書く。
+1. 本文を一時ファイル（`/tmp/pr-body.md` 等）に書く。Step 7で本文ファイルを書き出した場合は、そのファイルを使う。
 2. 作成コマンドを実行する。
 3. URLを報告する。
 
@@ -162,7 +181,8 @@ glab mr create \
 
 インライン `--body` ではなく `--body-file`（GitHub）/ ファイル経由（GitLab）を使い、整形とシェルエスケープの問題を避ける。
 
-修正依頼の場合は、修正を反映して再度1回の確認形式で提示する。
+修正依頼の場合は、修正を反映し、日本語の本文をStep 7と同じ方法で再び検査する。
+その後、再度1回の確認形式で提示する。
 
 ## アンチパターン
 
@@ -172,6 +192,7 @@ glab mr create \
 - ❌ 差分から読めない変更理由・影響を捏造する
 - ❌ テンプレートの見出しを改変・省略・追加・並べ替えする
 - ❌ ユーザーの承認前にPRを作成する
+- ❌ 日本語のドラフトを`ja-writing`で検査せずにユーザーへ提示する
 - ❌ 1行で表現できない巨大PRをそのまま作る（スコープ過大として分割を提案する）
 - ❌ 承認後に「ラベルはこれでよいか？」と追加確認で止まる
 - ❌ 外部ツールを勝手にインストールする
@@ -185,7 +206,7 @@ glab mr create \
 3. `jj diff -r "main..@"` で差分把握。`src/auth.ts` の null チェック追加と判明。
 4. `.github/PULL_REQUEST_TEMPLATE.md` を確認 → 無し → `templates/default.md` を全文読む。
 5. ユーザーに確認: 「この変更の動機（報告されたバグか・自発的修正か）と、レビューで特に見てほしい点はあるか」。
-6. What（null チェック追加）/Why（ユーザー回答）/Impact（認証フローのみ、破壊的変更なし）でドラフト。途中経路は書かない。
+6. What（null チェック追加）/Why（ユーザー回答）/Impact（認証フローのみ、破壊的変更なし）でドラフト。途中経路は書かない。日本語の本文を`ja-writing`で検査する。
 7. base/head/タイトル/ラベル/本文を1回提示 → 「OK」 → `gh pr create` → URL報告。
 
 ### 例2: リファクタのPR
@@ -195,5 +216,5 @@ glab mr create \
 3. プロジェクトの `.gitlab/merge_request_templates/refactor.md` を優先、全文を読む。
 4. 影響範囲（公開APIの変化の有無）を差分から確認。
 5. ユーザーに動機（保守性・性能のどちらが主目的か）を確認。
-6. テンプレート見出しに厳密に従ってドラフト。
+6. テンプレート見出しに厳密に従ってドラフト。日本語の本文を`ja-writing`で検査する。
 7. 1回確認 → 承認 → `glab mr create` → URL報告。

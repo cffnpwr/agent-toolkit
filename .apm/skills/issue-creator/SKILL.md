@@ -3,6 +3,7 @@ name: issue-creator
 description: Draft and create well-structured GitHub or GitLab issues with consistent formatting and zero implicit assumptions. Use when (1) user wants to file a bug report, feature request, improvement proposal, or task on GitHub or GitLab, (2) user pastes informal notes, error logs, or descriptions and asks to turn them into an issue, (3) user says things like "create an issue", "file a bug", "Issueを立てて", "バグ報告したい", "機能追加のIssueを書いて". Detects platform (GitHub/GitLab) from git remote, prefers project-local issue templates when present, falls back to bundled defaults. Always confirms issue type with user, asks for information that cannot be read from the codebase, and never invents reproduction steps or expected behavior.
 compatibility: |
   Required: gh CLI (for GitHub), glab CLI (for GitLab), git
+  Requires ja-writing skill.
   No language runtime required. All logic is in the SKILL itself; no scripts.
 ---
 
@@ -31,6 +32,12 @@ command -v gh  >/dev/null 2>&1 || { echo "gh not found." >&2; exit 1; }
 # GitLabなら
 command -v glab >/dev/null 2>&1 || { echo "glab not found." >&2; exit 1; }
 ```
+
+### スキル
+
+| スキル | 用途 |
+| --- | --- |
+| ja-writing | 本文が日本語の場合に、ドラフトをユーザーへ提示する前に本文を検査する |
 
 ## Core Principles
 
@@ -152,7 +159,20 @@ Render the chosen template with all gathered information. Follow these rules:
 - **Sensitive data**: Replace tokens, credentials, internal hostnames, personal paths with placeholders like `[TOKEN]`, `[INTERNAL_HOST]`, `[USER_HOME]`.
 - **Language**: Match the repository's existing issue language. If unclear, match the user's input language.
 
-### Step 7: Confirm and create
+### Step 7: Check Japanese text with ja-writing
+
+If the issue body is written in Japanese, check it with the `ja-writing` skill before presenting the draft.
+The user then approves the checked text, and the flow after approval stays uninterrupted.
+
+1. Write the body to a Markdown file in the temporary directory that `ja-writing` specifies.
+   Use this file as the body file in Step 8.
+2. Follow `ja-writing` to run textlint and the AI review, and revise the body.
+3. If you did not apply a textlint warning or an AI review finding,
+   include the finding and your reason in the confirmation in Step 8.
+
+If the body is not in Japanese, skip this step.
+
+### Step 8: Confirm and create
 
 Present the draft to the user **exactly once**, including everything needed for them to decide:
 
@@ -169,13 +189,14 @@ This single confirmation must contain the repository, the labels (if any), the t
 
 **After explicit approval ("OK", "yes", 「はい」, 「OK」, etc.), proceed straight through to issue creation without any further questions or confirmations.** Specifically:
 
-1. Write the body to a temporary file (`/tmp/issue-body.md` or similar).
+1. Write the body to a temporary file (`/tmp/issue-body.md` or similar). If Step 7 wrote the body file, use that file.
 2. Run the create command.
 3. Report the URL.
 
-Do all three in one continuous flow. Do not ask "ラベルはこれでいいか？" or "本当に作成するか？" after approval — those should have been included in the single confirmation in step 7.
+Do all three in one continuous flow. Do not ask "ラベルはこれでいいか？" or "本当に作成するか？" after approval — those should have been included in the single confirmation in step 8.
 
-If the user requests fixes instead of approving, apply the fixes and re-present the draft (back to single-confirmation format).
+If the user requests fixes instead of approving, apply the fixes and check the revised Japanese body again as in Step 7.
+Then re-present the draft (back to single-confirmation format).
 
 **GitHub**:
 ```bash
@@ -228,6 +249,7 @@ Things this skill must NOT do:
 - ❌ Mark issues with severity/priority labels without asking the user
 - ❌ Add `gh` / `glab` flags the user did not request (assignee, milestone, project)
 - ❌ Draft the body without reading the chosen template file first
+- ❌ Present a Japanese draft to the user without checking it with `ja-writing`
 - ❌ Use section headings that differ from the template (different wording, different order, extra sections, missing sections)
 - ❌ Pause after user approval to ask additional questions before running `gh`/`glab issue create`
 - ❌ Split the confirmation into multiple turns ("ラベルはこれでいいか？" → wait → "本当に作成するか？" → wait → create)
@@ -252,7 +274,7 @@ Things this skill must NOT do:
    > 3. ブラウザのコンソールにエラーは出ているか
    > 4. OS / ブラウザ / バージョン
    > 5. 毎回起きるか、たまに起きるか
-6. Draft using user answers, mirroring `bug.md` headings exactly. Verify headings match the template. Show draft for confirmation, including repo, labels, title, and full body in one message.
+6. Draft using user answers, mirroring `bug.md` headings exactly. Verify headings match the template. Check the Japanese body with `ja-writing`. Show draft for confirmation, including repo, labels, title, and full body in one message.
 7. After "OK" → write body to `/tmp/issue-body.md` → `gh issue create` → report URL. All in one continuous flow without re-confirming.
 
 ### Example 2: Feature request with code context
