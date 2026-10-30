@@ -29,3 +29,4 @@ ADR(Architecture Decision Record)は、トレードオフを伴う判断を記�
 | [0005](./0005-skills-ref.md) | 検証に参照ライブラリ`skills-ref`を使わない | accepted |
 | [0006](./0006-tokenizer.md) | トークン数の概算に`gpt-tokenizer`を使う | accepted |
 | [0007](./0007-permission-request-json-decision.md) | PermissionRequestイベントのhookは拒否をJSON decisionで伝える | accepted |
+| [0008](./0008-harness-detection-by-process-ancestry.md) | hookを起動したharnessを祖先プロセスの名前で判定する | accepted |

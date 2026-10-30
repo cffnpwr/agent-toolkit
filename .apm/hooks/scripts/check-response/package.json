@@ -1,0 +1,46 @@
+{
+  "name": "check-response",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cffnpwr/result-ts": "1.1.1",
+    "@cffnpwr/textlint-rule-preset-ja-writing-extras": "1.1.1",
+    "@textlint-ja/textlint-rule-no-dropping-i": "3.0.0",
+    "@textlint-ja/textlint-rule-no-insert-dropping-sa": "2.0.1",
+    "@textlint-ja/textlint-rule-no-insert-re": "1.0.2",
+    "@textlint-ja/textlint-rule-no-synonyms": "1.3.0",
+    "@textlint-ja/textlint-rule-preset-ai-writing": "1.7.0",
+    "@textlint/markdown-to-ast": "15.8.0",
+    "arktype": "2.2.9",
+    "kuromojin": "3.0.1",
+    "sentence-splitter": "5.0.1",
+    "sudachi-synonyms-dictionary": "20.0.0",
+    "textlint": "15.8.0",
+    "textlint-plugin-latex2e": "1.2.1",
+    "textlint-rule-ja-no-orthographic-variants": "2.0.0",
+    "textlint-rule-no-mixed-zenkaku-and-hankaku-alphabet": "1.0.1",
+    "textlint-rule-period-in-list-item": "1.0.1",
+    "textlint-rule-prefer-tari-tari": "1.0.3",
+    "textlint-rule-preset-ja-spacing": "3.0.4",
+    "textlint-rule-preset-ja-technical-writing": "12.0.2",
+    "textlint-rule-prh": "6.1.1",
+    "ts-pattern": "5.9.2"
+  },
+  "devDependencies": {
+    "@cffnpwr/eslint-config": "2.1.0",
+    "@cffnpwr/tsconfig": "1.0.0",
+    "@textlint/ast-node-types": "15.8.0",
+    "@textlint/types": "15.8.0",
+    "@types/bun": "1.4.3",
+    "@typescript-eslint/parser": "8.70.0",
+    "eslint": "10.10.0",
+    "globals": "17.12.0",
+    "jiti": "2.7.0",
+    "typescript": "6.0.3"
+  }
+}
