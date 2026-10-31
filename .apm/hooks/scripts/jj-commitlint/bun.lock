@@ -5,7 +5,7 @@
     "": {
       "name": "apm-hooks",
       "dependencies": {
-        "@cffnpwr/commitlint-config": "1.0.1",
+        "@cffnpwr/commitlint-config": "2.0.0",
         "@commitlint/lint": "21.2.4",
         "@commitlint/load": "21.2.4",
         "unbash": "4.0.12",
@@ -60,7 +60,7 @@
 
     "@cacheable/utils": ["@cacheable/utils@2.5.0", "", { "dependencies": { "hashery": "^1.5.1", "keyv": "^5.6.0" } }, "sha512-buipgOVDkkPXNR5+xBpDw7Zk2n1EvU7qBJCNUcL7rhQ//kfpOXPAvQ511Os0vpLYJ1pZnvudNytkQt2hst3wqA=="],
 
-    "@cffnpwr/commitlint-config": ["@cffnpwr/commitlint-config@1.0.1", "", {}, "sha512-np8mRZp+tV5tOElLsjgADvBgl6nUAFca7JV9zm8RP1HlVaYZ3f1jTKAIyYyOLIVfFDhacRyl2uFbf5EzrjbKYQ=="],
+    "@cffnpwr/commitlint-config": ["@cffnpwr/commitlint-config@2.0.0", "", {}, "sha512-oxguRG/ssxv3LyvnVn7q6YFKEWHZcgi+9zZLZfEZwRdhgfy3PqcFBi2PPbUWIx2CuqmgEEUU1piAGUd/tpTJ4A=="],
 
     "@cffnpwr/eslint-config": ["@cffnpwr/eslint-config@2.1.0", "", { "dependencies": { "@eslint-react/eslint-plugin": "5.28.4", "@eslint/js": "10.0.1", "@stylistic/eslint-plugin": "5.10.0", "eslint-plugin-better-tailwindcss": "4.10.0", "eslint-plugin-import-x": "4.17.1", "eslint-plugin-jsx-a11y": "6.10.2", "eslint-plugin-perfectionist": "5.13.0", "eslint-plugin-react-hooks": "7.1.1", "eslint-plugin-tailwindcss": "4.3.0", "eslint-plugin-unused-imports": "4.4.1", "typescript-eslint": "8.72.0" }, "peerDependencies": { "eslint": ">=9.18.0", "typescript": ">=5.5.0" } }, "sha512-opZMwlbxXlH9UcMn3wpZIynaYP5dbXUKRYzMBIXqosavB3jCfyAleP+dSWv2EXTkMcDUYnOmZxLQ7420AX9eAw=="],
 
