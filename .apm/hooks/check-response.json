@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/check-response/check-response.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
