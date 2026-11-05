@@ -11,7 +11,7 @@
     "@cffnpwr/commitlint-config": "1.0.1",
     "@commitlint/lint": "21.2.4",
     "@commitlint/load": "21.2.4",
-    "unbash": "4.0.12"
+    "unbash": "5.1.0"
   },
   "devDependencies": {
     "@cffnpwr/eslint-config": "2.1.0",
