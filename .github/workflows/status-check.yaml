@@ -18,4 +18,4 @@ jobs:
       pull-requests: read
       checks: read
       statuses: read
-    uses: cffnpwr/actions/.github/workflows/status-check.yaml@efda89c13e6a2157b202a04707fe2a91ed69d95f # main
+    uses: cffnpwr/actions/.github/workflows/status-check.yaml@48e45c45365cdef85fc28530132e1b97b15f5775 # main
