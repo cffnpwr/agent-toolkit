@@ -44,15 +44,19 @@ textlintとAIレビューは、どちらもファイルを対象にする。
 ### 2. textlintで検査する
 
 次のコマンドは、このSKILL.mdがあるディレクトリで実行する。
-作業中のリポジトリに独自のtextlint設定（`.textlintrc`・`.textlintrc.json`等）がある場合は、`--config`の値をその設定ファイルの絶対パスに置き換える。
+作業中のリポジトリに独自のtextlint設定（`.textlintrc`・`.textlintrc.json`等）がある場合は、2つのコマンドの`--config`の値をその設定ファイルの絶対パスに置き換える。
 
 ```sh
 # ファイルを検査する
 bun x textlint --config .textlintrc.json /absolute/path/to/file.md
 
 # 自動修正できるエラーを修正する
-bun x textlint --fix --config .textlintrc.json /absolute/path/to/file.md
+bun x textlint --fix --config .textlintrc.fix.json /absolute/path/to/file.md
 ```
+
+自動修正ではprhを除いた設定（`.textlintrc.fix.json`）を使う。
+`.prh.yaml`の規則の多くは置換後の語が1つに定まらないため、自動修正すると文が壊れる。
+prhの指摘は指摘メッセージに表示される指示に従って手で直す。
 
 - `error`は修正する
 - `warning`は、指摘された問題が実際に文章にあると判断した場合に修正する。修正しない場合は、理由をユーザーに伝える
