@@ -7,7 +7,7 @@
       "dependencies": {
         "@cffnpwr/result-ts": "1.1.1",
         "arktype": "2.2.9",
-        "gpt-tokenizer": "4.1.1",
+        "gpt-tokenizer": "4.1.2",
         "yaml": "2.9.1",
       },
       "devDependencies": {
@@ -425,7 +425,7 @@
 
     "gopd": ["gopd@1.2.0", "", {}, "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg=="],
 
-    "gpt-tokenizer": ["gpt-tokenizer@4.1.1", "", {}, "sha512-6yHFbXHA9K72ydpjAhYzcJFYTGROwj3RyKuSs0h4tdePoghkBj29vgSDn+nfEmOmKhhy1Mad2AiiVPRwGeaJRQ=="],
+    "gpt-tokenizer": ["gpt-tokenizer@4.1.2", "", {}, "sha512-5GwcLcZd6IqCdrGTTPcoKqbJk8cCWHHsoTHR/uQGZKT29CFcnJEg69qisGbKesQpzxRq9yQO4lBgsaZ8SawcGQ=="],
 
     "graceful-fs": ["graceful-fs@4.2.11", "", {}, "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="],
 
