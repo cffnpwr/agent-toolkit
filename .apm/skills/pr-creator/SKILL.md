@@ -49,21 +49,16 @@ CLIの使い方とプラットフォーム固有の差異は[references/platform
 
 ### 2. ベースブランチとheadを確定する
 
-マージ先のブランチ（base。通常は`main`）と、マージ元のブランチ（jjの場合はchange）（head）を確定する。
+マージ先のブランチ（base。通常は`main`）と、マージ元のブランチ（head）を確定する。
 不明な場合は、デフォルトブランチをbaseとして提示し、ユーザーに確認する。
 
 ### 3. 差分を把握する
 
-リポジトリルートに`.jj`があれば`jj`、なければ`git`で差分とコミット履歴を取得する。
+`git`で差分とコミット履歴を取得する。
 
 ```bash
-# jjで管理しているリポジトリ
-jj log -r "main..@"          # コミット一覧
-jj diff -r "main..@"         # 累積差分
-
-# gitで管理しているリポジトリ
-git log --oneline main..HEAD
-git diff main...HEAD
+git log --oneline main..HEAD  # コミット一覧
+git diff main...HEAD          # 累積差分
 ```
 
 コミットメッセージから変更の意図を読み取る。
@@ -204,7 +199,7 @@ glab mr create \
 
 1. `git remote get-url origin`を実行する → GitHubの`acme/web`
 2. baseを`main`、headを現在のブランチに確定する
-3. `jj diff -r "main..@"`で差分を把握する → `src/auth.ts`にnullチェックを追加した変更と判明する
+3. `git diff main...HEAD`で差分を把握する → `src/auth.ts`にnullチェックを追加した変更と判明する
 4. `.github/PULL_REQUEST_TEMPLATE.md`を確認する → テンプレートが存在しないため、`templates/default.md`の全文を読む
 5. ユーザーに、この変更の動機（報告されたバグの修正・自発的な修正のどちらであるか）と、レビューで特に見てほしい点を質問する
 6. What（ユーザー情報がない場合に認証処理で例外が発生しなくなる）・Why（ユーザーの回答）・Impact（影響は認証フローのみ、破壊的変更なし）でドラフトを書く。途中の経緯は書かない。日本語の本文を`ja-writing`で検査する
@@ -213,7 +208,7 @@ glab mr create \
 ### 例2: リファクタリングのPR
 
 1. GitLabと判定する
-2. `jj log -r "main..@"`で複数のコミットの意図を読む
+2. `git log main..HEAD`で複数のコミットの意図を読む
 3. プロジェクトの`.gitlab/merge_request_templates/refactor.md`を優先して選び、全文を読む
 4. 影響範囲（公開APIの変化の有無）を差分から確認する
 5. ユーザーに動機（保守性・性能のどちらが主な目的か）を確認する
