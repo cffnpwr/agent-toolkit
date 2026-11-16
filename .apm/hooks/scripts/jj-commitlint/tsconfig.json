@@ -1,9 +1,0 @@
-{
-  "extends": "@cffnpwr/tsconfig/bun",
-  "compilerOptions": {
-    "paths": {
-      "unbash": ["./node_modules/unbash/dist/parser"]
-    }
-  },
-  "include": ["**/*.ts"]
-}
