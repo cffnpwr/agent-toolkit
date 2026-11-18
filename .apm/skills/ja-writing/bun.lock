@@ -13,7 +13,7 @@
         "@textlint-ja/textlint-rule-no-insert-re": "1.0.2",
         "@textlint-ja/textlint-rule-no-synonyms": "1.3.0",
         "@textlint-ja/textlint-rule-preset-ai-writing": "1.7.0",
-        "sudachi-synonyms-dictionary": "20.0.0",
+        "sudachi-synonyms-dictionary": "20.0.1",
         "textlint": "15.8.0",
         "textlint-plugin-latex2e": "1.2.1",
         "textlint-rule-ja-no-orthographic-variants": "2.0.0",
@@ -655,7 +655,7 @@
 
     "structured-source": ["structured-source@4.0.0", "", { "dependencies": { "boundary": "^2.0.0" } }, "sha512-qGzRFNJDjFieQkl/sVOI2dUjHKRyL9dAJi2gCPGJLbJHBIkyOHxjuocpIEfbLioX+qSJpvbYdT49/YCdMznKxA=="],
 
-    "sudachi-synonyms-dictionary": ["sudachi-synonyms-dictionary@20.0.0", "", {}, "sha512-cWmi1X9UGaedI1AWcNmWCg9FNY0SzMMzJLFcxQAPCLaBSqYQIzTLEl/XJmRhrs6jx7jH6tTNCMMgNH/hPBXFaQ=="],
+    "sudachi-synonyms-dictionary": ["sudachi-synonyms-dictionary@20.0.1", "", {}, "sha512-41tKl7VKjaIn2ZCl6CrlTcLCPQm/1HwcFR82TUaTKrNKHiI2YSuG+osRAIOLBdZL49zyQLDx3Tz83hConmUQPA=="],
 
     "table": ["table@6.9.0", "", { "dependencies": { "ajv": "^8.0.1", "lodash.truncate": "^4.4.2", "slice-ansi": "^4.0.0", "string-width": "^4.2.3", "strip-ansi": "^6.0.1" } }, "sha512-9kY+CygyYM6j02t5YFHbNz2FN5QmYGv9zAjVp4lCDjlCw7amdckXlEt/bjMhUIfj4ThGRE4gCUH5+yGnNuPo5A=="],
 
