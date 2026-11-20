@@ -17,7 +17,7 @@ permissions: {}
 jobs:
   discover:
     name: Discover hook script projects
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -44,7 +44,7 @@ jobs:
   check:
     name: Check ${{ matrix.hook }}
     needs: discover
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
