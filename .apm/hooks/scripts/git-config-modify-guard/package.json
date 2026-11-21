@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@cffnpwr/result-ts": "1.1.1",
-    "unbash": "4.0.12",
+    "unbash": "6.0.4",
     "zod": "4.6.7"
   },
   "devDependencies": {
