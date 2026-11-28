@@ -14,7 +14,7 @@
     "@textlint-ja/textlint-rule-preset-ai-writing": "1.7.2",
     "sudachi-synonyms-dictionary": "20.0.1",
     "textlint-plugin-latex2e": "1.2.1",
-    "textlint-rule-ja-no-orthographic-variants": "2.0.0",
+    "textlint-rule-ja-no-orthographic-variants": "2.0.3",
     "textlint-rule-no-mixed-zenkaku-and-hankaku-alphabet": "1.0.1",
     "textlint-rule-period-in-list-item": "1.0.1",
     "textlint-rule-prefer-tari-tari": "1.0.3",
